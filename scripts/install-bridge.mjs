@@ -32,5 +32,9 @@ const plist=`<?xml version="1.0" encoding="UTF-8"?>
 </dict></plist>`;
 await writeFile(destination,plist,{mode:0o600});
 try{execFileSync('launchctl',['bootout',`${domain}/${label}`],{stdio:'ignore'});}catch{}
-execFileSync('launchctl',['bootstrap',domain,destination],{stdio:'inherit'});
+// bootout unloads asynchronously; allow the old process to finish before loading.
+for(let attempt=0;;attempt++) {
+ try {execFileSync('launchctl',['bootstrap',domain,destination],{stdio:'pipe'});break;}
+ catch(e) {if(attempt>=24)throw e;await new Promise(resolve=>setTimeout(resolve,1000));}
+}
 console.log(`Installed ${label}. The bridge starts at login and is running now.`);
