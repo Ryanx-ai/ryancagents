@@ -1,11 +1,17 @@
 import { NextResponse } from 'next/server';
-import { matches, sessionToken } from '../../../lib/server';
+import { sameOrigin,botCheckResponse } from '../../../lib/server';
+import {createViewerToken,validateAccessPair} from '../../../lib/access.mjs';
+const headers={'Cache-Control':'private, no-store'};
 export async function POST(req: Request) {
-  let sameOrigin=false;
-  try { const origin=new URL(req.headers.get('origin') || ''); sameOrigin=origin.host===req.headers.get('host') && (process.env.NODE_ENV!=='production'||origin.protocol==='https:'); } catch {}
-  if (!sameOrigin) return NextResponse.json({error:'Origin rejected'},{status:403});
-  let key; try { const body=await req.json(); key=body.key; } catch { return NextResponse.json({error:'Invalid request'},{status:400}); }
-  if (typeof key!=='string'||!matches(key,process.env.OFFICE_ACCESS_KEY)) return NextResponse.json({error:'That access key doesn’t match. Use the key saved on your Mac.'},{status:401});
-  const res=NextResponse.json({ok:true}); res.cookies.set('office_session',sessionToken(key),{httpOnly:true,secure:process.env.NODE_ENV==='production',sameSite:'strict',path:'/',maxAge:60*60*24*30}); return res;
+  if (!sameOrigin(req)) return NextResponse.json({error:'Origin rejected'},{status:403,headers});
+  const denied=await botCheckResponse();if(denied)return denied;
+  let body;try {body=await req.json();}catch{return NextResponse.json({error:'Invalid request'},{status:400,headers});}
+  const result=validateAccessPair(body,process.env.OFFICE_ACCESS_KEY,process.env.OFFICE_PERSONAL_KEY);
+  if(result==='unconfigured')return NextResponse.json({error:'Office access needs configuration.'},{status:503,headers});
+  if(result!=='valid')return NextResponse.json({error:'The access keys don’t match.'},{status:401,headers});
+  const token=createViewerToken(process.env.OFFICE_ACCESS_KEY,process.env.OFFICE_PERSONAL_KEY);
+  const res=NextResponse.json({ok:true,token},{headers});
+  res.cookies.delete('office_session');
+  return res;
 }
-export async function DELETE() { const res=NextResponse.json({ok:true});res.cookies.delete('office_session');return res; }
+export async function DELETE() { const res=NextResponse.json({ok:true},{headers});res.cookies.delete('office_session');return res; }

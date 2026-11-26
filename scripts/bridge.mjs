@@ -42,19 +42,38 @@ async function readAgent(agent){
 let stopping=false;
 for(const signal of ['SIGINT','SIGTERM'])process.on(signal,()=>{stopping=true;});
 await mkdir(path.join(root,'.local'),{recursive:true});
-async function tick(){
+let lastPublished=0,lastFingerprint='',publishing=null;
+async function tick(force=false){
  const agents=await Promise.all(config.agents.map(readAgent));
  relay.context={agents,events:[...history.values()].sort((a,b)=>Date.parse(b.at)-Date.parse(a.at)).slice(0,25)};
- agents.push(relay.managerState());
+ if(!agents.some(a=>a.id==='manager'))agents.push(relay.managerState());
  const events=[...history.values()].sort((a,b)=>Date.parse(b.at)-Date.parse(a.at)).slice(0,100);
  history.clear();events.forEach(e=>history.set(e.id,e));
  const snapshot=validateSnapshot({version:1,observedAt:new Date().toISOString(),agents,events});
  if(process.argv.includes('--dry-run')){console.log(JSON.stringify(snapshot,null,2));return;}
- await relay.save();
+ if(Object.values(relay.entries).some(e=>e.dirty))await relay.save();
+ const fingerprint=JSON.stringify({agents,events});
+ if(!force&&fingerprint===lastFingerprint&&Date.now()-lastPublished<20000)return;
+ if(publishing)return;
+ // One upload at a time; sampling keeps running while the network is busy.
+ // The next tick publishes the latest state if it changed during this upload.
+ publishing=publish(snapshot,fingerprint,agents).catch(e=>console.error(`${new Date().toISOString()} ${e.message}`)).finally(()=>{publishing=null;});
+ if(force)await publishing;
+}
+async function publish(snapshot,fingerprint,agents){
  const response=await fetch(endpoint,{method:'POST',headers:{'Authorization':`Bearer ${config.bridgeKey}`,'Content-Type':'application/json'},body:JSON.stringify(snapshot),signal:AbortSignal.timeout(15000)});
  if(!response.ok)throw new Error(`Office returned HTTP ${response.status}`);
+ lastPublished=Date.now();lastFingerprint=fingerprint;
  await writeFile(path.join(root,'.local/bridge-status.json'),JSON.stringify({lastSync:snapshot.observedAt,agents:agents.map(a=>({id:a.id,status:a.status}))}),{mode:0o600});
  console.log(`${snapshot.observedAt} synced ${agents.length} agents, ${events.length} recent events`);
- try{await relay.tick();}catch(e){console.error(`${new Date().toISOString()} ${e.message}`);}
 }
-do {try{await tick();}catch(e){console.error(`${new Date().toISOString()} ${e.message}`);}if(process.argv.includes('--once')||process.argv.includes('--dry-run'))break;if(!stopping)await new Promise(r=>setTimeout(r,20000));}while(!stopping);
+async function safely(task){try{await task();}catch(e){console.error(`${new Date().toISOString()} ${e.message}`);}}
+async function loop(task,interval){
+ while(!stopping){const started=Date.now();await safely(task);if(!stopping)await new Promise(r=>setTimeout(r,Math.max(250,interval-(Date.now()-started))));}
+}
+// Observe local logs every two seconds and publish changes immediately; unchanged
+// snapshots keep a twenty-second heartbeat. Prompt pickup never waits for ingest.
+await safely(()=>tick(true));
+if(process.argv.includes('--dry-run'))process.exit(0);
+if(process.argv.includes('--once'))await safely(()=>relay.tick());
+else await Promise.all([loop(()=>tick(),2000),loop(()=>relay.tick(),2000)]);

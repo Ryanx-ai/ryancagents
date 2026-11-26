@@ -5,3 +5,207 @@
 @media(max-width:800px){.hud-top-left{top:17px;left:17px}.hud-top-right{top:17px;right:17px;gap:7px}.hud-top-right>.hud-button{width:36px;height:36px}.hq-badge{height:39px}.signal-badge{height:36px;padding:0 10px}.hud-bottom{bottom:18px;gap:8px;flex-direction:column}.hud-dock{padding:5px}.hud-dock .hud-button{width:37px;height:36px}.agent-switcher{gap:7px;padding:5px}.avatar-shortcut{width:39px;height:37px}.avatar-shortcut .ryan-sprite{transform:scale(.85);margin-top:-10px}.chat-panel,.utility-panel{left:auto;right:15px;top:74px;bottom:145px;width:min(390px,calc(100vw - 30px));max-height:none}.wide-panel{left:15px;width:auto;right:15px}.panel-header{height:65px}.utility-panel>.panel-header{height:54px}.chat-history{padding:14px 13px}.world-vignette{box-shadow:inset 0 0 120px #0a101d66}.prompt-composer textarea{height:50px}.flow-node{width:240px}.stats-panel{padding:15px;gap:12px}.stats-panel>div{padding:20px 15px}.toast{bottom:145px;width:calc(100vw - 35px);max-width:400px}.world-ryan.manager{top:85%}}
 @media(max-height:660px){.office-world{min-height:480px}.hud-top-left,.hud-top-right{top:12px}.hud-bottom{bottom:12px}.chat-panel,.utility-panel{top:65px;bottom:85px}.hud-bottom{flex-direction:row}.world-ryan>.ryan-sprite{transform:scale(.8);transform-origin:50% 100%}.world-ryan .attention-marker,.world-ryan .yay-marker,.world-ryan .work-marker{bottom:85%}.prompt-composer textarea{height:42px}.chat-panel .panel-header{height:57px}.chat-avatar{height:38px}.chat-panel{width:370px}}
 @media(prefers-reduced-motion:reduce){*,*:before,*:after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
+
+/* Smoked glass keeps the office visible while the controls stay legible. */
+:root {
+  --glass-surface: rgb(24 35 46 / 58%);
+  --glass-hud: rgb(29 42 54 / 46%);
+  --glass-edge: rgb(240 234 218 / 28%);
+  --glass-highlight: rgb(255 250 235 / 15%);
+}
+.floating-panel,
+.unlock-dialog,
+.dialog {
+  background: var(--glass-surface);
+  border-color: var(--glass-edge);
+  -webkit-backdrop-filter: blur(18px) saturate(125%);
+  backdrop-filter: blur(18px) saturate(125%);
+  box-shadow: 0 18px 60px rgb(6 14 24 / 28%), inset 0 1px 0 var(--glass-highlight);
+}
+.hq-badge,
+.hud-top-right > .hud-button,
+.signal-badge,
+.hud-dock,
+.agent-switcher {
+  background: var(--glass-hud);
+  border-color: var(--glass-edge);
+  -webkit-backdrop-filter: blur(14px) saturate(125%);
+  backdrop-filter: blur(14px) saturate(125%);
+  box-shadow: 0 8px 24px rgb(8 16 25 / 20%), inset 0 1px 0 var(--glass-highlight);
+}
+.panel-header {
+  background: rgb(255 248 226 / 4%);
+  border-bottom-color: rgb(237 232 219 / 18%);
+}
+.actor-name {
+  background: rgb(20 31 42 / 52%);
+  -webkit-backdrop-filter: blur(9px);
+  backdrop-filter: blur(9px);
+  border-color: rgb(242 235 215 / 24%);
+  color: #f6f0e4;
+}
+.avatar-shortcut {
+  background: rgb(210 224 229 / 10%);
+  border-color: rgb(245 237 220 / 22%);
+}
+.avatar-shortcut:hover,
+.avatar-shortcut.active {
+  background: rgb(228 230 215 / 20%);
+}
+.agent-result,
+.assistant-message,
+.stats-panel > div {
+  background: rgb(15 27 39 / 16%);
+  border-color: rgb(236 233 217 / 17%);
+}
+.agent-result.unreviewed {
+  background: rgb(215 177 111 / 12%);
+  border-color: rgb(239 202 142 / 40%);
+}
+.user-message {
+  background: rgb(127 162 180 / 22%);
+  border-color: rgb(226 236 231 / 23%);
+}
+.prompt-composer,
+.activity-filters label,
+.unlock-dialog input,
+.dialog input {
+  background: rgb(14 26 37 / 28%);
+  border-color: rgb(214 227 230 / 30%);
+  box-shadow: inset 0 1px 3px rgb(5 16 28 / 8%);
+}
+.prompt-composer:focus-within {
+  border-color: rgb(242 211 158 / 72%);
+  background: rgb(14 26 37 / 38%);
+}
+.chat-history p { color: #f1f0e8; }
+.message-label,
+.compact-status,
+.setting-row > span,
+.settings-action,
+.hud-button { color: #e0e7e4; }
+.message-label time,
+.user-message span,
+.event-row > div > span,
+.event-row time,
+.stats-panel span,
+.composer-bottom > a,
+.composer-bottom > span,
+.prompt-composer textarea::placeholder { color: #c0cdd0; }
+.empty-state { color: #c4cfce; }
+.activity-filters select {
+  background: rgb(24 38 48 / 48%);
+  border-color: rgb(222 231 227 / 25%);
+  color: #e6ede7;
+}
+.activity-filters select option { background: #273a45; }
+.modal-scrim {
+  background: rgb(7 18 30 / 28%);
+  -webkit-backdrop-filter: blur(5px);
+  backdrop-filter: blur(5px);
+}
+.flow-node {
+  background: rgb(28 44 56 / 60%);
+  border-color: rgb(205 222 223 / 30%);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+}
+.react-flow { background: transparent; }
+.react-flow__controls button { background: rgb(30 48 62 / 64%)!important; }
+.react-flow__minimap { background: rgb(25 43 56 / 42%)!important; }
+.react-flow__attribution { background: rgb(25 43 56 / 46%)!important; }
+
+/* Activity is an observed status summary, held above the character's head. */
+.thought-bubble {
+  position: absolute;
+  bottom: calc(100% - 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 5;
+  width: max-content;
+  max-width: 170px;
+  padding: 9px 12px 10px;
+  border: 1px solid rgb(246 237 213 / 34%);
+  border-radius: 12px 12px 12px 4px;
+  background: rgb(23 36 48 / 70%);
+  -webkit-backdrop-filter: blur(12px) saturate(120%);
+  backdrop-filter: blur(12px) saturate(120%);
+  box-shadow: 0 6px 18px rgb(7 16 28 / 22%), inset 0 1px 0 rgb(255 246 218 / 12%);
+  text-align: left;
+  pointer-events: none;
+}
+.thought-bubble::before,
+.thought-bubble::after {
+  content: '';
+  position: absolute;
+  background: rgb(40 55 68 / 82%);
+  border: 1px solid rgb(246 237 213 / 35%);
+  border-radius: 50%;
+}
+.thought-bubble::before { width: 6px; height: 6px; left: calc(50% - 5px); bottom: -10px; }
+.thought-bubble::after { width: 3px; height: 3px; left: calc(50% - 9px); bottom: -17px; }
+.bubble-label {
+  display: block;
+  color: var(--agent-color, #edd2a5);
+  font-size: 8px;
+  font-weight: 600;
+  line-height: 1.3;
+  margin-bottom: 4px;
+}
+.bubble-text {
+  display: block;
+  color: #f5f2e9;
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+.review-marker {
+  position: absolute;
+  bottom: calc(100% - 5px);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 4;
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  color: #ffe0a5;
+  font-size: 13px;
+  line-height: 1;
+  background: rgb(45 42 34 / 62%);
+  border: 1px solid rgb(246 218 168 / 48%);
+  border-radius: 8px;
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  box-shadow: 0 3px 9px rgb(14 18 25 / 18%);
+  pointer-events: none;
+}
+.world-ryan.settled-review { transition: left var(--walk-duration, 4.2s) linear; }
+.ryan-sprite { animation-duration: var(--sprite-duration, 1.2s); }
+@media (min-width: 1800px) {
+  .world-ryan .thought-bubble,
+  .world-ryan .review-marker { bottom: 125%; }
+}
+@media (max-height: 660px) {
+  .world-ryan .thought-bubble,
+  .world-ryan .review-marker { bottom: 85%; }
+  .thought-bubble { padding: 7px 10px 8px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .world-ryan.settled-review { transition: none; }
+}
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .floating-panel,
+  .unlock-dialog,
+  .dialog { background: rgb(27 39 50 / 92%); }
+  .thought-bubble { background: rgb(23 36 48 / 94%); }
+}
+
+.office-stage{position:absolute;inset:0}
+.office-locked .office-stage{pointer-events:none;user-select:none}
+.office-locked .office-stage *{animation-play-state:paused!important;transition:none!important}
+.unlock-protection{display:flex;align-items:center;gap:7px;color:#c0cdd0;font-size:11px;margin:0 0 18px}
+.world-ryan.idle,.world-ryan.offline{transition:left var(--walk-duration,4.2s) linear}
+.compact-status.review{color:#e9c189}
+.unlock-dialog{width:min(370px,calc(100vw - 40px))}

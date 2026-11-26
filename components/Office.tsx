@@ -1,31 +1,44 @@
 "use client";
 import {useEffect,useRef,useState} from 'react';
 import {agents,type AgentState,type AgentId,type Status} from '../lib/model';
-import {avatarMode} from '../lib/game-state.mjs';
+import {avatarMode,needsReview,nextCompletionCue,ambientStep,activityBubble} from '../lib/game-state.mjs';
 export function Ryan({status='idle',size=132,still=false,pose,manager=false}:{status?:Status;size?:number;still?:boolean;pose?:string;manager?:boolean}) {
- const state=pose||status;const row=state==='walk-right'?1:state==='walk-left'?2:state==='wave'?3:state==='celebrate'?4:state==='working'?7:state==='attention'||state==='waiting'?6:state==='error'?5:state==='review'?8:0;
- const frames=row===3?4:row===4?5:[1,2,5].includes(row)?8:6;
+ const state=pose||status;const row=state==='walk-right'?1:state==='walk-left'?2:state==='wave'?3:state==='celebrate'?4:state==='working'?7:state==='attention'||state==='waiting'?6:state==='error'?5:state==='review'?8:state==='look-up'?9:state==='look-down'?10:0;
+ const frames=row===3?4:row===4?5:[1,2,5,9,10].includes(row)?8:6;
  return <span aria-hidden="true" className={`ryan-sprite ${still?'still':''}`} style={{width:size,height:size*208/192,backgroundImage:manager?'url(/assets/manager-ryan-sheet.png)':undefined,backgroundSize:`${size*8}px ${size*208/192*11}px`,backgroundPositionY:-row*size*208/192,'--frame-end':`${-size*frames}px`,'--frames':frames} as React.CSSProperties}/>;
 }
 function Plant({x,y,scale=1}:{x:number;y:number;scale?:number}) {return <g transform={`translate(${x} ${y}) scale(${scale})`}><path d="M-13 0H13L9 26H-9Z" fill="#987450"/><path d="M-16 0H16V6H-16Z" fill="#bc9567"/><path d="M0 1V-48M0-17L-18-36M0-26L19-46" stroke="#47745e" strokeWidth="4"/><path d="M-3-29Q-31-25-27-48Q-5-48-3-29M1-38Q2-67 18-61Q28-45 1-38M3-19Q31-42 28-19Q20-9 3-19M-2-10Q-31-11-24-28Q-7-32-2-10" fill="#4f846c"/><path d="M-3-29L-22-44M2-39L15-55" stroke="#78a885" strokeWidth="2"/></g>}
 function Window({x,w=236}:{x:number;w?:number}) {return <g><rect x={x-7} y="91" width={w+14} height="174" fill="#403f46"/><rect x={x} y="98" width={w} height="158" fill="url(#sky)"/>{x===433&&<circle cx={x+w-45} cy="124" r="18" fill="#f0d6a3" opacity=".8"/>}{[0,1,2,3,4,5,6,7].map((n)=><g key={n}><rect x={x+n*32} y={185+(n%3)*12} width="25" height="71" fill={n%2?'#262e40':'#30384a'}/>{[0,1,2].map(k=><rect key={k} x={x+n*32+6} y={198+(n%3)*12+k*14} width="4" height="5" fill="#ba9668" opacity={n%2?.4:.7}/>)}</g>)}<path d={`M${x+w/2} 98V256M${x} 168H${x+w}`} stroke="#44434a" strokeWidth="7"/><path d={`M${x} 102H${x+w}M${x+4} 98V256`} stroke="#72706a" strokeWidth="3"/><rect x={x-11} y="256" width={w+22} height="10" fill="#77706a"/></g>}
 function Desk({x,color,active}:{x:number;color:string;active:boolean}) {return <g transform={`translate(${x} 0)`}><ellipse cx="56" cy="433" rx="95" ry="13" fill="#15181d" opacity=".45"/><rect x="-27" y="384" width="173" height="11" fill="#ac8967"/><rect x="-24" y="395" width="168" height="7" fill="#644f40"/><rect x="-16" y="402" width="9" height="40" fill="#39373a"/><rect x="126" y="402" width="9" height="40" fill="#39373a"/><rect x="-16" y="422" width="151" height="5" fill="#413b37"/><rect x="45" y="328" width="71" height="45" rx="3" fill="#1d232b" stroke="#6c6f77" strokeWidth="3"/><rect x="50" y="333" width="61" height="33" fill={active?'#233c42':'#29313b'}/><path d="M57 343H80M57 350H98M57 357H87" stroke={color} strokeWidth="3" opacity={active?.9:.3}/><rect x="76" y="374" width="9" height="9" fill="#56585c"/><rect x="65" y="381" width="31" height="3" fill="#7b7b7d"/><rect x="39" y="380" width="26" height="4" fill="#5a616a"/><rect x="122" y="371" width="10" height="13" fill={color}/><path d="M132 374H136V380H132" fill="none" stroke={color} strokeWidth="2"/><rect x="-12" y="378" width="29" height="6" fill="#dad2b6"/><rect x="-10" y="374" width="24" height="4" fill="#a1a69e"/><path d="M-14 372V324L6 308" stroke="#88877b" fill="none" strokeWidth="4"/><path d="M-4 308L12 299L21 313L4 322Z" fill="#b8aa82"/><path d="M6 322L-12 377H48L21 313Z" fill="url(#lamp)" opacity=".35"/></g>}
 
-function Actor({agent,index,state,mode,selected,onSelect,paused}:{agent:typeof agents[number];index:number;state:AgentState;mode:string;selected:boolean;onSelect:()=>void;paused:boolean}) {
- const home=index===3?49:22+index*27;const [x,setX]=useState(home);const [moving,setMoving]=useState(false);const [facing,setFacing]=useState('right');const position=useRef(home);const sequence=useRef(index*3);
+function Actor({agent,index,state,mode,pendingReview,online,selected,onSelect,paused}:{agent:typeof agents[number];index:number;state:AgentState;mode:string;pendingReview:boolean;online:boolean;selected:boolean;onSelect:()=>void;paused:boolean}) {
+ const home=index===3?49:22+index*27;
+ const [x,setX]=useState(home);const [ambient,setAmbient]=useState('idle');
+ const [walkDuration,setWalkDuration]=useState(4200);
+ const position=useRef(home);const sequence=useRef(0);const actor=useRef<HTMLButtonElement>(null);
+ const [cue,setCue]=useState<{seen:string|null;until:number}>();
+ useEffect(()=>{if(online)setCue(previous=>nextCompletionCue(previous,state.completedAt,Date.now()));},[state.completedAt,online]);
+ useEffect(()=>{if(!cue?.until)return;const timer=setTimeout(()=>setCue(previous=>previous?{...previous,until:0}:previous),Math.max(0,cue.until-Date.now()));return()=>clearTimeout(timer);},[cue?.until]);
+ const celebrating=mode==='review'&&!!cue?.until&&cue.seen===state.completedAt;
+ const visualMode=celebrating?'celebrate':mode;
  useEffect(()=>{
-  let stop:ReturnType<typeof setTimeout>;const reduced=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  if(mode!=='idle'&&mode!=='offline'){setX(home);position.current=home;setMoving(false);return;}
-  if(paused||selected||reduced){setMoving(false);return;}
-  const wander=()=>{sequence.current++;const target=12+((sequence.current*23+index*19)%76);setFacing(target>position.current?'right':'left');setX(target);position.current=target;setMoving(true);stop=setTimeout(()=>setMoving(false),4200);};
-  const first=setTimeout(wander,1500+index*1700);const interval=setInterval(wander,10500+index*1300);
-  return()=>{clearTimeout(first);clearTimeout(stop);clearInterval(interval);};
- },[mode,home,index,paused,selected]);
- const pose=mode==='celebrate'?'celebrate':mode==='attention'?'attention':moving?`walk-${facing}`:mode==='working'?'working':'idle';
- return <button className={`world-ryan ${agent.id==='manager'?'manager':''} ${mode} ${selected?'selected':''}`} style={{left:`${x}%`,'--agent-color':agent.color} as React.CSSProperties} onClick={onSelect} aria-label={`Talk to ${agent.name}${mode==='celebrate'?', ready for review':mode==='attention'?', needs attention':''}`}>
+  let timer:ReturnType<typeof setTimeout>;
+  const reduced=window.matchMedia('(prefers-reduced-motion: reduce)');
+  const stop=()=>{clearTimeout(timer);setAmbient('idle');};
+  if(!['idle','offline','review'].includes(visualMode)){setX(home);position.current=home;setAmbient('idle');return;}
+  if(paused||selected||reduced.matches){const el=actor.current;if(el?.parentElement){const frozen=parseFloat(getComputedStyle(el).left)/el.parentElement.clientWidth*100;if(Number.isFinite(frozen)){setX(frozen);position.current=frozen;}}stop();return;}
+  const act=()=>{const next=ambientStep(index,sequence.current++,position.current);setWalkDuration(next.duration);setAmbient(next.pose);setX(next.x);position.current=next.x;timer=setTimeout(act,next.duration);};
+  const motionChanged=()=>{stop();if(!reduced.matches)act();};
+  timer=setTimeout(act,200+index*450);reduced.addEventListener('change',motionChanged);
+  return()=>{clearTimeout(timer);reduced.removeEventListener('change',motionChanged);};
+ },[visualMode,home,index,paused,selected]);
+ const pose=celebrating?'celebrate':mode==='attention'?'attention':mode==='working'?'working':ambient;
+ const bubble=activityBubble(state,online);
+ return <button ref={actor} className={`world-ryan ${agent.id==='manager'?'manager':''} ${visualMode} ${mode==='review'&&!celebrating?'settled-review':''} ${selected?'selected':''}`} style={{left:`${x}%`,'--agent-color':agent.color,'--walk-duration':`${walkDuration}ms`,'--sprite-duration':pose==='idle'?'2.4s':pose.startsWith('walk')?'.85s':'1.2s'} as React.CSSProperties} onClick={onSelect} aria-label={`Talk to ${agent.name}${mode==='attention'?', needs attention':pendingReview?', ready for review':''}`} data-pose={pose}>
    {mode==='attention'&&<span className="attention-marker" aria-label="Needs attention">!</span>}
-   {mode==='celebrate'&&<><span className="yay-marker">yay!</span><span className="confetti" aria-hidden="true">{Array.from({length:8},(_,i)=><i key={i} style={{'--i':i} as React.CSSProperties}/>)}</span></>}
-   {mode==='working'&&<span className="work-marker" aria-label="Working"><i/><i/><i/></span>}
+   {celebrating&&<><span className="yay-marker">yay!</span><span className="confetti" aria-hidden="true">{Array.from({length:8},(_,i)=><i key={i} style={{'--i':i} as React.CSSProperties}/>)}</span></>}
+   {pendingReview&&!celebrating&&mode!=='attention'&&mode!=='working'&&<span className="review-marker" aria-label="Ready for review">★</span>}
+   {bubble&&<span className="thought-bubble" role="status"><span className="bubble-label">Activity</span><span className="bubble-text">{bubble}</span></span>}
    <span className="sprite-shadow"/><Ryan status={state.status} pose={pose} still={paused} manager={agent.id==='manager'}/>
    <span className="actor-name"><i/>{agent.name}</span>
  </button>;
@@ -55,7 +68,7 @@ export default function Office({states,selected,onSelect,night,paused,reviewed,o
   <g transform="translate(893 523)"><rect x="-40" y="0" width="110" height="79" rx="4" fill="#62574e"/><rect x="-35" y="5" width="100" height="20" fill="#b3a18b"/><path d="M-32 31H62M-32 56H62" stroke="#39352f" strokeWidth="3"/><path d="M8 40H25M8 64H25" stroke="#b6a48b" strokeWidth="3"/><rect x="-23" y="-45" width="46" height="44" rx="3" fill="#242d32"/><rect x="-17" y="-39" width="34" height="16" fill="#5c6f6d"/><rect x="-12" y="-15" width="24" height="13" fill="#d0bfa1"/><path d="M-8-51Q-20-59-7-65M5-52Q-3-63 8-69" stroke="#ccb991" opacity=".3" fill="none"/></g>
   <Plant x={1009} y={583} scale={1.3}/><Plant x={64} y={591} scale={1.2}/>
   </svg>
-{agents.map((agent,index)=>{const state=states.find(a=>a.id===agent.id)!;return <Actor key={agent.id} agent={agent} index={index} state={state} mode={avatarMode(state,reviewed,online)} selected={selected===agent.id} onSelect={()=>onSelect(agent.id)} paused={paused}/>;})}
+{agents.map((agent,index)=>{const state=states.find(a=>a.id===agent.id)!;return <Actor key={agent.id} agent={agent} index={index} state={state} mode={avatarMode(state,reviewed,online)} pendingReview={needsReview(state,reviewed)} online={online} selected={selected===agent.id} onSelect={()=>onSelect(agent.id)} paused={paused}/>;})}
 <div className="world-vignette"/>
 </div></div>;
 }

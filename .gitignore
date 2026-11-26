@@ -6,3 +6,5 @@ node_modules/
 .local/
 *.tsbuildinfo
 .DS_Store
+
+access-key.txt

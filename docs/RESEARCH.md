@@ -28,7 +28,7 @@ The dashboard reflects these sessions, not all ChatGPT custom GPTs or all Codex 
 
 ## Storage, authentication and privacy
 
-[Vercel Blob SDK reference](https://vercel.com/docs/vercel-blob/using-blob-sdk) supports private objects read through authenticated server code. One bounded snapshot avoids an unbounded event archive. Bridge writes use a dedicated secret. Viewer reads use a different access key and secure HttpOnly cookie. No runtime tokens are embedded in client assets. Activity labels are reconstructed from a server allowlist. The gamified revision also stores bounded final answers, dashboard prompts, replies and manager assignments in private Blob storage, behind the same viewer authentication. No raw tool results or reasoning are exported. See README for retention and runtime boundaries.
+[Vercel Blob SDK reference](https://vercel.com/docs/vercel-blob/using-blob-sdk) supports private objects read through authenticated server code. One bounded snapshot avoids an unbounded event archive. Bridge writes use a dedicated secret. Viewer access requires both office and personal credentials plus server-verified BotID; a short-lived signed token exists only in page memory, so refresh always relocks the office. No runtime tokens are embedded in client assets. Activity labels are reconstructed from a server allowlist. The gamified revision also stores bounded final answers, dashboard prompts, replies and manager assignments in private Blob storage, behind the same viewer authentication. No raw tool results or reasoning are exported. See README for retention and runtime boundaries.
 
 ## Visual direction
 
