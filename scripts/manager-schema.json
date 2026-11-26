@@ -1,0 +1,7 @@
+{
+  "type":"object","additionalProperties":false,"required":["summary","assignments"],
+  "properties":{
+    "summary":{"type":"string"},
+    "assignments":{"type":"array","maxItems":3,"items":{"type":"object","additionalProperties":false,"required":["agentId","prompt"],"properties":{"agentId":{"type":"string","enum":["scheduler","outreach","contacts"]},"prompt":{"type":"string"}}}}
+  }
+}

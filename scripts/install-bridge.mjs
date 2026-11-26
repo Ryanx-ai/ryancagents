@@ -9,7 +9,7 @@ await readFile(path.join(root,'.local/bridge.json'),'utf8');
 // LaunchAgents must not depend on access to macOS-protected Documents folders.
 const runtime=path.join(homedir(),'Library/Application Support/RyanHQ');
 for(const dir of ['scripts','lib','.local'])await mkdir(path.join(runtime,dir),{recursive:true,mode:0o700});
-for(const file of ['scripts/bridge.mjs','lib/telemetry.mjs','.local/bridge.json']) {
+for(const file of ['scripts/bridge.mjs','scripts/prompt-relay.mjs','scripts/manager.mjs','scripts/manager-schema.json','lib/telemetry.mjs','lib/game-state.mjs','.local/bridge.json']) {
  await copyFile(path.join(root,file),path.join(runtime,file));
  await chmod(path.join(runtime,file),0o600);
 }
