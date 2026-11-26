@@ -50,7 +50,7 @@ The initial connection reads up to 4 MiB from each file’s tail; future reads a
 
 ### Installed Mac service
 
-When installed for Ryan, the bridge runs as LaunchAgent `com.ryanc.agent-office`. Its plist is at `~/Library/LaunchAgents/com.ryanc.agent-office.plist`; its config and logs are in this checkout’s ignored `.local` directory. It starts at login and restarts after failure.
+When installed for Ryan, the bridge runs as LaunchAgent `com.ryanc.agent-office`. Its plist is at `~/Library/LaunchAgents/com.ryanc.agent-office.plist`; its runtime, config and logs are in `~/Library/Application Support/RyanHQ/` (logs under `.local/`). This avoids macOS Documents-folder restrictions for background processes. It starts at login and restarts after failure. Run `node scripts/install-bridge.mjs` again after changing the bridge code or local config to update the installed copy.
 
 ```sh
 launchctl print gui/$(id -u)/com.ryanc.agent-office
