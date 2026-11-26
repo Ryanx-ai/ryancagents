@@ -1,10 +1,12 @@
 import {get,put,BlobPreconditionFailedError} from '@vercel/blob';
 import {NextResponse} from 'next/server';
-import {OFFICE_STATE_PATH,checkedState,atomicOfficeUpdate,queueOfficeMessage,saveOfficeReceipt,saveOfficeReview} from './office-store.mjs';
+import {OFFICE_STATE_PATH,checkedState,requireStrongETag,atomicOfficeUpdate,queueOfficeMessage,saveOfficeReceipt,saveOfficeReview} from './office-store.mjs';
 export async function readJSON(name:string) {const blob=await get(name,{access:'private',useCache:false});if(!blob||blob.statusCode!==200)return null;return new Response(blob.stream).json();}
 export async function writeJSON(name:string,value:unknown,overwrite=true) {return put(name,JSON.stringify(value),{access:'private',addRandomSuffix:false,allowOverwrite:overwrite,contentType:'application/json',cacheControlMaxAge:60});}
 const adapter={
- async read(){const blob=await get(OFFICE_STATE_PATH,{access:'private',useCache:false});if(!blob||blob.statusCode!==200)return null;return {value:await new Response(blob.stream).json(),etag:blob.blob.etag};},
+ // Brotli/gzip responses have weak ETags that Blob correctly rejects for CAS.
+ // Mutation reads require the strong validator for the exact stored bytes.
+ async read(){const blob=await get(OFFICE_STATE_PATH,{access:'private',useCache:false,headers:{'Accept-Encoding':'identity'}});if(!blob||blob.statusCode!==200)return null;return {value:await new Response(blob.stream).json(),etag:requireStrongETag(blob.blob.etag)};},
  async write(state:unknown,etag:string){await put(OFFICE_STATE_PATH,JSON.stringify(state),{access:'private',addRandomSuffix:false,allowOverwrite:true,ifMatch:etag,contentType:'application/json',cacheControlMaxAge:60});},
  isConflict(error:unknown){return error instanceof BlobPreconditionFailedError;},
 };

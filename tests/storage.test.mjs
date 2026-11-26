@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {atomicOfficeUpdate,newOfficeState,queueOfficeMessage,saveOfficeReceipt,saveOfficeReview} from '../lib/office-store.mjs';
+import {atomicOfficeUpdate,newOfficeState,requireStrongETag,queueOfficeMessage,saveOfficeReceipt,saveOfficeReview} from '../lib/office-store.mjs';
 function fixture(initial=newOfficeState()){
  let value=structuredClone(initial),version=1,writes=0,failAfterCommit=false;
  return {
@@ -56,4 +56,9 @@ test('bridge assignments require an existing manager parent in the same state',a
  const f=fixture();const assignment=message('child',{agentId:'designer',parentId:'parent'});
  await assert.rejects(update(f,s=>queueOfficeMessage(s,assignment,true)),e=>e.code==='MANAGER_REQUEST_REQUIRED');
  await update(f,s=>queueOfficeMessage(s,message('parent')));await update(f,s=>queueOfficeMessage(s,assignment,true));assert.equal(f.state.messages.length,2);
+});
+
+test('compressed or missing validators are rejected without pretending a weak ETag is strong',()=>{
+ assert.equal(requireStrongETag('"storage-version"'),'"storage-version"');
+ for(const etag of ['W/"storage-version"','',' ',null,undefined])assert.throws(()=>requireStrongETag(etag),e=>e.code==='STORAGE_VALIDATOR');
 });
