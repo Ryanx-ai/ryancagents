@@ -52,12 +52,21 @@ export class PromptRelay {
   }
  }
  receipt(e){return {id:e.id,status:e.status,reply:e.reply||null,pickedUpAt:e.pickedUpAt,queuedAt:e.queuedAt,deliveredAt:e.deliveredAt,repliedAt:e.repliedAt};}
- async flushReceipts(){
-  await Promise.all(Object.values(this.entries).filter(e=>e.dirty&&e.status!=='dispatching').map(async e=>{
-   const receipt=this.receipt(e);await this.request('PATCH',receipt);
-   if(JSON.stringify(this.receipt(e))===JSON.stringify(receipt))e.dirty=false;
-   await this.save();
-  }));
+ flushReceipts(){
+  if(this.receiptTask)return this.receiptTask;
+  const dirty=Object.values(this.entries).filter(e=>e.dirty&&e.status!=='dispatching');
+  if(!dirty.length)return Promise.resolve();
+  this.receiptTask=(async()=>{
+   // Keep the single-flight guard until every write settles, including when one
+   // fails early. Otherwise an old in-flight receipt could overwrite a new one.
+   const results=await Promise.allSettled(dirty.map(async e=>{
+    const receipt=this.receipt(e);await this.request('PATCH',receipt);
+    if(JSON.stringify(this.receipt(e))===JSON.stringify(receipt))e.dirty=false;
+    await this.save();
+   }));
+   const failure=results.find(r=>r.status==='rejected');if(failure)throw failure.reason;
+  })().finally(()=>{this.receiptTask=null;});
+  return this.receiptTask;
  }
  async tick(){
   try {

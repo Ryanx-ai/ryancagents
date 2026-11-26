@@ -41,3 +41,19 @@ test('in-flight receipt writes cannot clear a newer observation',async t=>{
  const r=await relay(t);r.entries[id]={...command(),status:'queued',dirty:true};r.request=async()=>{r.entries[id].status='delivered';r.entries[id].deliveredAt=stamp;return {ok:true};};
  await r.flushReceipts();assert.equal(r.entries[id].dirty,true);assert.equal(r.entries[id].status,'delivered');
 });
+test('concurrent flush loops share one write and preserve a newer receipt for the next flush',async t=>{
+ const r=await relay(t);let release;const blocked=new Promise(resolve=>release=resolve);const statuses=[];
+ r.entries[id]={...command(),status:'queued',dirty:true};
+ r.request=async(method,body)=>{statuses.push(body.status);if(statuses.length===1)await blocked;return {ok:true};};
+ const first=r.flushReceipts(),overlapping=r.flushReceipts();assert.strictEqual(first,overlapping);assert.deepEqual(statuses,['queued']);
+ r.entries[id].status='replied';r.entries[id].reply='Fixture reply';release();await first;assert.equal(r.entries[id].dirty,true);
+ await r.flushReceipts();assert.deepEqual(statuses,['queued','replied']);assert.equal(r.entries[id].dirty,false);
+ await r.flushReceipts();assert.equal(statuses.length,2);
+});
+test('partial receipt failure holds the flush guard until the remaining writes finish',async t=>{
+ const r=await relay(t);let release;const blocked=new Promise(resolve=>release=resolve);let writes=0;
+ r.entries[id]={...command(),status:'queued',dirty:true};r.entries[laterId]={...command('scheduler',laterId),status:'queued',dirty:true};
+ r.request=async(method,body)=>{writes++;if(body.id===id)throw new Error('Fixture failure');await blocked;return {ok:true};};
+ const first=r.flushReceipts();const rejected=assert.rejects(first,/Fixture failure/);await Promise.resolve();await Promise.resolve();
+ assert.strictEqual(r.flushReceipts(),first);assert.equal(writes,2);release();await rejected;assert.equal(r.receiptTask,null);assert.equal(r.entries[id].dirty,true);assert.equal(r.entries[laterId].dirty,false);
+});

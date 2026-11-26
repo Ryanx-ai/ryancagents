@@ -65,15 +65,15 @@ async function publish(snapshot,fingerprint,agents){
  if(!response.ok)throw new Error(`Office returned HTTP ${response.status}`);
  lastPublished=Date.now();lastFingerprint=fingerprint;
  await writeFile(path.join(root,'.local/bridge-status.json'),JSON.stringify({lastSync:snapshot.observedAt,agents:agents.map(a=>({id:a.id,status:a.status}))}),{mode:0o600});
- console.log(`${snapshot.observedAt} synced ${agents.length} agents, ${events.length} recent events`);
+ console.log(`${snapshot.observedAt} synced ${agents.length} agents, ${snapshot.events.length} recent events`);
 }
 async function safely(task){try{await task();}catch(e){console.error(`${new Date().toISOString()} ${e.message}`);}}
 async function loop(task,interval){
  while(!stopping){const started=Date.now();await safely(task);if(!stopping)await new Promise(r=>setTimeout(r,Math.max(250,interval-(Date.now()-started))));}
 }
-// Observe local logs every two seconds and publish changes immediately; unchanged
+// Observe local logs every second and publish changes immediately; unchanged
 // snapshots keep a twenty-second heartbeat. Prompt pickup never waits for ingest.
 await safely(()=>tick(true));
 if(process.argv.includes('--dry-run'))process.exit(0);
 if(process.argv.includes('--once'))await safely(()=>relay.tick());
-else await Promise.all([loop(()=>tick(),2000),loop(()=>relay.tick(),2000)]);
+else await Promise.all([loop(()=>tick(),1000),loop(()=>relay.tick(),2000),loop(()=>relay.flushReceipts(),500)]);
