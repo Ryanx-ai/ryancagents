@@ -275,3 +275,6 @@
 @media (prefers-reduced-motion: reduce) {
   .office-world--duplex .world-ryan { transition: none; }
 }
+.office-clock-digits { font-family: 'SFMono-Regular', Consolas, monospace; font-size: 21px; font-variant-numeric: tabular-nums; letter-spacing: 1px; fill: #f0c68b; }
+.office-clock-zone { font-family: 'DM Sans', sans-serif; font-size: 8px; font-weight: 500; letter-spacing: 1.5px; fill: #bba684; }
+.office-sign-lettering { font-family: 'Space Grotesk', sans-serif; font-size: 14px; font-weight: 500; letter-spacing: .6px; fill: #e2c596; }

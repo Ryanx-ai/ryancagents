@@ -23,6 +23,27 @@ function Window({x,y,w=236,h=134,moon=false}:{x:number;y:number;w?:number;h?:num
 function Pendant({x,y}:{x:number;y:number}) {
  return <g transform={`translate(${x} ${y})`}><path d="M0 0V18" stroke="#20252a" strokeWidth="3"/><path d="M-29 31L-14 18H14L29 31Z" fill="#72736b"/><path d="M-26 32H26" stroke="#ead3a1" strokeWidth="3"/><ellipse cy="37" rx="36" ry="10" fill="#eac98d" opacity=".15" filter="url(#glow)"/></g>;
 }
+function DigitalClock() {
+ const [time,setTime]=useState('--:--:--');
+ useEffect(()=>{
+  const formatter=new Intl.DateTimeFormat('en-GB',{timeZone:'Asia/Singapore',hour:'2-digit',minute:'2-digit',second:'2-digit',hourCycle:'h23'});
+  let timer:ReturnType<typeof setTimeout>;
+  const tick=()=>{
+   clearTimeout(timer);
+   setTime(formatter.format(new Date()));
+   if(document.visibilityState==='visible')timer=setTimeout(tick,1000-Date.now()%1000);
+  };
+  const onVisibility=()=>{if(document.visibilityState==='visible')tick();else clearTimeout(timer);};
+  tick();document.addEventListener('visibilitychange',onVisibility);
+  return()=>{clearTimeout(timer);document.removeEventListener('visibilitychange',onVisibility);};
+ },[]);
+ return <g className="office-clock" transform="translate(513 170)" role="img" aria-label={`Singapore time ${time}`} aria-live="off">
+  <rect x="-73" y="-29" width="146" height="58" rx="4" fill="#75634f"/>
+  <rect x="-69" y="-25" width="138" height="50" rx="2" fill="#1d292c" stroke="#9b8261" strokeWidth="1"/>
+  <text className="office-clock-digits" textAnchor="middle" y="1">{time}</text>
+  <text className="office-clock-zone" textAnchor="middle" y="17">SGT</text>
+ </g>;
+}
 function Desk({x,y,color,active=false,kind='worker',empty=false}:{x:number;y:number;color:string;active?:boolean;kind?:'worker'|'manager'|'designer';empty?:boolean}) {
  return <g transform={`translate(${x} ${y})`} data-desk={kind} data-desk-state={empty?'empty':'occupied'}>
   <ellipse cy="-1" rx="85" ry="9" fill="#15181d" opacity=".36"/>
@@ -98,7 +119,7 @@ export default function Office({states,selected,onSelect,night,paused,reviewed,o
    <rect x="33" y="281" width="956" height="48" fill="url(#floor)"/><path d="M26 280H995" stroke="#b09069" strokeWidth="7"/>
    <rect x="26" y="328" width="969" height="23" fill="#493d34"/><path d="M26 329H995" stroke="#c1a27d" strokeWidth="5"/><path d="M33 348H991" stroke="#262b2e" strokeWidth="7"/>
    <Bookcase x={103} y={171}/><Plant x={453} y={268} scale={.8}/><Plant x={912} y={268} scale={.8}/>
-   <g transform="translate(513 170)"><circle r="24" fill="#b9ad93"/><circle r="20" fill="#333b40"/><path d="M0-14V0L10 7" stroke="#ded0ae" strokeWidth="2"/><circle r="2" fill="#ded0ae"/></g>
+   <DigitalClock/>
    <g transform="translate(926 110)"><rect width="49" height="91" fill="#847462"/><rect x="5" y="5" width="39" height="81" fill="#554f4a"/>{['#c6a7df','#8bc6aa','#efb66d','#a6b5ff'].map((color,i)=><g key={color} transform={`translate(${10+i%2*18} ${13+Math.floor(i/2)*30})`}><rect width="13" height="21" fill="#e1d7c0"/><rect y="4" width="13" height="13" fill={color}/><circle cx="6" cy="1" r="2" fill="#c0aa7e"/></g>)}</g>
    <Desk x={319} y={297} color="#efdab0" active={working('manager')} kind="manager"/><Desk x={759} y={297} color="#c6a7df" active={working('designer')} kind="designer"/>
    {[119,339,559,779].map((x,i)=><Window key={x} x={x} y={395} w={160} h={120} moon={i===2}/>)}
@@ -109,7 +130,7 @@ export default function Office({states,selected,onSelect,night,paused,reviewed,o
    {(['scheduler','outreach','contacts'] as const).map(id=><Desk key={id} x={places[id].home*11} y={598} color={agents.find(a=>a.id===id)!.color} active={working(id)}/>)}
    <Desk x={869} y={598} color="#939fa6" empty/>
    <Plant x={95} y={570} scale={.8}/><Plant x={946} y={567} scale={.65}/>
-   <g transform="translate(549 367)"><rect x="-65" y="-9" width="130" height="22" rx="2" fill="#292e34" stroke="#73634c"/><text textAnchor="middle" y="6" fontSize="11" letterSpacing="3" fill="#dab984" fontFamily="monospace">RYAN // HQ</text></g>
+   <g transform="translate(549 367)"><rect x="-65" y="-9" width="130" height="22" rx="2" fill="#292e34" stroke="#73634c"/><text className="office-sign-lettering" textAnchor="middle" y="6">Ryan HQ</text></g>
    <g transform="translate(123 697)"><ellipse cx="59" cy="43" rx="96" ry="18" fill="#332c2b" opacity=".35"/><rect x="-20" y="-20" width="146" height="47" rx="6" fill="#798578"/><path d="M29-15V25M77-15V25" stroke="#525e54" strokeWidth="3"/><rect x="-25" y="9" width="156" height="30" rx="5" fill="#626b63"/><rect x="-27" y="-1" width="15" height="38" rx="4" fill="#939889"/><rect x="118" y="-1" width="15" height="38" rx="4" fill="#939889"/><rect x="5" y="-7" width="23" height="23" rx="3" fill="#bc9c76"/><path d="M-9 39V48M114 39V48" stroke="#302d2c" strokeWidth="7"/></g>
    <g transform="translate(925 683)"><rect x="-36" y="0" width="78" height="65" rx="3" fill="#62574e"/><rect x="-33" y="4" width="72" height="13" fill="#b3a18b"/><path d="M-31 31H37M-31 49H37" stroke="#39352f" strokeWidth="3"/><path d="M-4 23H11M-4 41H11M-4 59H11" stroke="#b6a48b" strokeWidth="2"/><rect x="-18" y="-36" width="35" height="35" rx="3" fill="#242d32"/><rect x="-13" y="-31" width="25" height="12" fill="#5c6f6d"/><rect x="-9" y="-12" width="18" height="10" fill="#d0bfa1"/></g>
    <Plant x={1030} y={735} scale={1.15}/><Plant x={61} y={747} scale={.85}/>
