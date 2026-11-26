@@ -1,6 +1,14 @@
 import {get,put,list} from '@vercel/blob';
 export async function readJSON(name:string) {const blob=await get(name,{access:'private',useCache:false});if(!blob||blob.statusCode!==200)return null;return new Response(blob.stream).json();}
 export async function writeJSON(name:string,value:unknown,overwrite=true) {return put(name,JSON.stringify(value),{access:'private',addRandomSuffix:false,allowOverwrite:overwrite,contentType:'application/json',cacheControlMaxAge:60});}
+export async function completedReviews() {
+ const completed:Record<string,boolean>={};let cursor:string|undefined;
+ do {const page=await list({prefix:'office/completion-reviews/',limit:1000,cursor});
+  for(const blob of page.blobs){const match=/^office\/completion-reviews\/((?:scheduler|outreach|contacts|manager)-\d+)\.json$/.exec(blob.pathname);if(match)completed[match[1]]=true;}
+  cursor=page.hasMore?page.cursor:undefined;
+ }while(cursor);
+ return completed;
+}
 export async function recentCommands(since?:number) {
  const paths:string[]=[];
  // The prompt fast path lists only recent dates and filters on Blob upload time.

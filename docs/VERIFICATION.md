@@ -1,8 +1,12 @@
 # Verification — 26 November 2026
 
-38 automated tests pass. Production build passes. Browser checks covered desktop and mobile, activity bubbles, mixed idle/walking/looking poses, quiet review stars, review acknowledgement, two-key unlock, incorrect credentials, and frozen reload behavior.
+45 automated tests pass. Production build passes. Browser checks covered desktop and mobile, activity bubbles, mixed idle/walking/looking poses, quiet review stars, review acknowledgement, two-key unlock, incorrect credentials, and frozen reload behavior.
 
 Production checks: legacy viewer cookies receive 401 on activity/messages/reviews. An unverified scripted unlock receives 403 from bot protection. A normal browser passes bot verification and still rejects incorrect credentials. Both saved credentials are configured on production and preview; their values are excluded from Git.
+
+## Final UI adjustments
+
+Desktop and 390px mobile browser checks confirmed readable Markdown headings/lists/links, service shortcuts, review counts, individual Mark done actions and the Done tab, plus workflow logos, rename, and explicit open-agent actions. Refresh still clears the session and freezes the office behind both key fields. Review GET and POST reject unauthenticated requests with 401. Completion tests cover independent acknowledgements, historical completions, stale timestamps, and deduplication. URL tests preserve Gmail account selectors/hashes and reject unsafe protocols and embedded credentials. No real business completions were acknowledged during testing.
 
 ## Manager latency checks
 

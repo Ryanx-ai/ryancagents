@@ -1,0 +1,28 @@
+.workflow-polished { position:relative; }
+.workflow-toolbar { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:11px 17px; border-bottom:1px solid rgba(230,237,239,.12); }
+.planning-chip { color:#bac7cb; font-size:10px; border:1px solid rgba(220,230,230,.16); border-radius:5px; padding:6px 8px; white-space:nowrap; }
+.workflow-polished .flow-node { display:block; width:266px; padding:12px 13px 5px; border-radius:11px; background:rgba(31,45,55,.76); border-color:rgba(215,228,232,.26); box-shadow:0 7px 19px rgba(5,13,22,.16),inset 0 1px 0 rgba(255,255,255,.07); backdrop-filter:blur(18px); }
+.workflow-polished .flow-node.selected { border-color:var(--agent-color); box-shadow:0 0 0 2px color-mix(in srgb,var(--agent-color) 16%,transparent),0 8px 22px #07111b33; }
+.workflow-polished .flow-node-top { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+.workflow-polished .flow-node small { margin:0; font-size:10px; font-weight:500; }
+.workflow-polished .flow-dot { flex-shrink:0; width:5px; height:5px; }
+.workflow-polished .flow-dot.waiting,.workflow-polished .flow-dot.error { background:#e9bd79; }
+.flow-node-main { display:flex; align-items:center; gap:11px; min-height:53px; padding:8px 0 6px; }
+.workflow-polished .flow-node strong { display:block; font-size:13px; line-height:1.35; font-weight:550; overflow-wrap:anywhere; color:#f2f1e9; }
+.flow-logo-stack { display:flex; align-items:center; flex-shrink:0; }
+.flow-service-mark { width:36px; height:36px; display:grid; place-items:center; background:rgba(232,239,239,.07); border:1px solid rgba(237,242,242,.1); border-radius:8px; }
+.flow-logo-stack.multiple .flow-service-mark { width:31px; height:34px; }
+.flow-logo-stack.multiple .flow-service-mark+.flow-service-mark { margin-left:-5px; background:rgba(36,51,62,.96); }
+.flow-node-bottom { display:flex; align-items:center; gap:5px; border-top:1px solid rgba(226,237,239,.08); min-height:29px; }
+.flow-services { font-size:9px; line-height:1.4; color:#aabdc5; flex:1; }
+.flow-node-actions { display:flex; align-items:center; gap:1px; }
+.flow-node-actions button { width:27px; height:27px; display:grid; place-items:center; color:#bacbd0; border-radius:5px; }
+.flow-node-actions button:hover,.flow-node-actions button:focus-visible { color:#ffe0a7; background:rgba(245,221,176,.13); }
+.workflow-polished .react-flow__handle { width:8px!important; height:8px!important; }
+.workflow-polished .react-flow__node:focus-visible .flow-node { outline:2px solid #f2ce91; outline-offset:3px; }
+.workflow-polished .react-flow__controls button { width:30px; height:30px; }
+.workflow-notice { position:absolute; left:50%; bottom:16px; transform:translateX(-50%); z-index:8; display:flex; align-items:center; gap:8px; padding:8px 10px; white-space:nowrap; font-size:10px; border-radius:7px; color:#e0eadf; background:rgba(31,48,52,.78); border:1px solid rgba(194,225,198,.26); backdrop-filter:blur(18px); }
+.workflow-notice button { display:grid; place-items:center; width:21px; height:21px; color:#bdd0ca; }
+.workflow-rename .button-group { justify-content:flex-end; }
+@media(max-width:600px){.workflow-toolbar {padding:10px;gap:7px}.planning-chip {font-size:9px;padding:5px 6px}.workflow-toolbar .subtle-button {padding:8px;font-size:10px}.workflow-toolbar .button-group {gap:4px}.workflow-polished .react-flow__minimap {display:none}}
+@media(prefers-reduced-motion:reduce){.workflow-polished .react-flow__edge-path {animation:none!important}}

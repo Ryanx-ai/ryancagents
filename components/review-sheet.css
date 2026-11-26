@@ -1,0 +1,63 @@
+/* Keep the office behind glass, with a quiet, darker surface for reading. */
+.floating-panel.chat-panel{width:min(580px,calc(100vw - 50px));max-height:none;background:rgb(19 29 40 / 85%)}
+.floating-panel.review-panel{width:min(590px,calc(100vw - 50px));max-height:none;background:rgb(19 29 40 / 85%)}
+.chat-history{padding:20px;scroll-padding:20px}
+.chat-history .agent-result,.chat-history .assistant-message{padding:18px;background:rgb(10 18 28 / 32%)}
+.chat-history .agent-result.unreviewed{background:rgb(239 200 142 / 6%)}
+.chat-history .message-label{font-size:12px;margin-bottom:16px}
+.chat-history .message-label time{font-size:11px}
+.chat-history .user-message p{font-size:14px;line-height:1.65}
+.review-sheet{overflow-y:auto;min-height:0;padding:20px;scrollbar-width:thin;scrollbar-color:#667886 transparent}
+.review-overview{display:flex;align-items:center;gap:22px;padding:0 0 18px;color:#ccd8df;font-size:12px}
+.review-overview span{display:flex;align-items:baseline;gap:7px}
+.review-overview b{font-family:'Space Grotesk',sans-serif;font-size:25px;line-height:1;color:#f4dab0;font-weight:500}
+.review-links{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px}
+.review-links>a,.review-links>button{display:flex;flex-direction:column;justify-content:center;align-items:center;gap:7px;min-height:62px;border:1px solid #d3e2e226;border-radius:8px;padding:9px 4px;color:#edf2f1;background:#d2e5ef08;font-size:10px;text-align:center;min-width:0}
+.review-links span{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.review-links>button>svg:last-child{display:none}
+.review-links svg{flex-shrink:0}
+.review-links>a:hover,.review-links>button:hover{background:#d2e5ef14;border-color:#d3e2e255}
+.review-agents{display:flex;flex-wrap:wrap;gap:6px;margin:12px 0 22px}
+.review-agents button{display:flex;align-items:center;gap:7px;font-size:11px;padding:7px 9px;border-radius:6px;color:#d7e0e5;background:#d2e5ef09}
+.review-agents i,.review-item-heading strong i{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.review-tabs{display:flex;gap:5px;border-bottom:1px solid #d3e2e226;margin-bottom:14px}
+.review-tabs button{font-size:12px;padding:9px 12px 12px;color:#c3d0d9;border-bottom:2px solid transparent;display:flex;align-items:center;gap:7px}
+.review-tabs button[aria-pressed=true]{color:#f5d7a6;border-bottom-color:#e9c38e}
+.review-tabs button span{font-size:10px;background:#d6e3e912;border-radius:5px;padding:2px 5px}
+.review-list{display:grid;gap:12px}
+.review-item{border:1px solid #d5e4e026;border-radius:10px;padding:16px;background:rgb(10 18 28 / 28%);min-width:0}
+.review-item-heading{display:flex;gap:10px;align-items:center;justify-content:space-between}
+.review-item-heading strong{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:500;color:#f4f3ed}
+.review-state{display:flex;gap:5px;align-items:center;font-size:10px;white-space:nowrap;color:#f0c98e}
+.review-state.attention{color:#ffd19c}
+.review-item.is-done .review-state{color:#a9d7b9}
+.review-item>time{display:block;font-size:11px;color:#b7c7d1;margin:7px 0 12px}
+.review-summary{font-size:13px;color:#e5ebeb;line-height:1.65;overflow-wrap:anywhere;margin:10px 0}
+.review-result summary{cursor:pointer;display:flex;align-items:center;gap:4px;color:#d4bd95;font-size:12px;padding:5px 0;list-style:none}
+.review-result summary::-webkit-details-marker{display:none}
+.review-result[open] summary svg{rotate:90deg}
+.review-result .message-content{margin:12px 0 16px;padding-top:14px;border-top:1px solid #d3e2e226}
+.result-quicklinks{display:flex;flex-wrap:wrap;gap:7px;margin:12px 0}
+.result-quicklinks a{display:inline-flex;align-items:center;gap:5px;max-width:100%;overflow-wrap:anywhere;font-size:11px;line-height:1.5;background:#a6b5ff0e;border:1px solid #bacbff24;border-radius:5px;padding:6px 9px;color:#c8d9ff}
+.result-quicklinks a:hover{text-decoration:underline}
+.result-quicklinks svg{flex-shrink:0}
+.review-actions{display:flex;align-items:center;gap:12px;margin-top:14px;flex-wrap:wrap}
+.review-actions>button,.review-actions>a{display:inline-flex;align-items:center;gap:4px;font-size:11px;padding:6px 0;color:#d7e1e5}
+.review-actions>.mark-done{margin-left:auto;background:#e9c38e;color:#25303a;padding:9px 12px;border-radius:6px;font-weight:600;gap:6px}
+.review-actions>.mark-done:hover{background:#f5d7a6}
+.review-empty{display:flex;align-items:center;justify-content:center;flex-direction:column;gap:12px;padding:35px 12px;color:#c1d4cc;font-size:13px}
+.review-empty strong{font-weight:400}
+.done-receipt{display:flex;align-items:center;gap:6px;font-size:12px;color:#abd2bb;margin-top:14px}
+@media(max-width:800px){
+ .floating-panel.chat-panel,.floating-panel.review-panel{width:calc(100vw - 30px);max-height:none}
+ .chat-history{padding:13px}
+ .chat-history .agent-result,.chat-history .assistant-message{padding:15px}
+ .review-sheet{padding:15px}
+ .review-overview{gap:16px}
+ .review-links{grid-template-columns:repeat(4,minmax(0,1fr))}
+ .review-links>a,.review-links>button{min-height:54px}
+ .review-agents{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:5px}
+ .review-agents button{gap:5px;padding:7px 6px;font-size:10px}
+ .review-agents svg{display:none}
+ .review-item{padding:14px}
+}
