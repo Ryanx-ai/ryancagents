@@ -2,6 +2,7 @@
 import {useEffect,useRef,useState} from 'react';
 import {agents,emptyAgents,type AgentState,type AgentId,type Status} from '../lib/model';
 import {avatarMode,needsReview,nextCompletionCue,ambientStep,activityBubble} from '../lib/game-state.mjs';
+import {getOfficeTime} from '../lib/office-time.mjs';
 
 const places:Record<AgentId,{home:number;floor:'upstairs'|'downstairs'}>={
  scheduler:{home:19,floor:'downstairs'},outreach:{home:39,floor:'downstairs'},contacts:{home:59,floor:'downstairs'},
@@ -17,26 +18,28 @@ export function Ryan({status='idle',size=132,still=false,pose,manager=false,agen
 function Plant({x,y,scale=1}:{x:number;y:number;scale?:number}) {
  return <g transform={`translate(${x} ${y}) scale(${scale})`}><path d="M-13 0H13L9 26H-9Z" fill="#987450"/><path d="M-16 0H16V6H-16Z" fill="#bc9567"/><path d="M0 1V-48M0-17L-18-36M0-26L19-46" stroke="#47745e" strokeWidth="4"/><path d="M-3-29Q-31-25-27-48Q-5-48-3-29M1-38Q2-67 18-61Q28-45 1-38M3-19Q31-42 28-19Q20-9 3-19M-2-10Q-31-11-24-28Q-7-32-2-10" fill="#4f846c"/><path d="M-3-29L-22-44M2-39L15-55" stroke="#78a885" strokeWidth="2"/></g>;
 }
-function Window({x,y,w=236,h=134,moon=false}:{x:number;y:number;w?:number;h?:number;moon?:boolean}) {
- return <g transform={`translate(${x} ${y})`}><rect x="-7" y="-7" width={w+14} height={h+14} fill="#403f46"/><svg width={w} height={h} overflow="hidden"><rect width={w} height={h} fill="url(#sky)"/>{moon&&<circle cx={w-42} cy="27" r="15" fill="#f0d6a3" opacity=".8"/>}{Array.from({length:Math.ceil(w/31)},(_,n)=><g key={n}><rect x={n*31} y={h-55+(n%3)*10} width="25" height="66" fill={n%2?'#262e40':'#30384a'}/>{[0,1,2].map(k=><rect key={k} x={n*31+6} y={h-43+(n%3)*10+k*14} width="4" height="5" fill="#ba9668" opacity={n%2?.4:.7}/>)}</g>)}</svg><path d={`M${w/2} 0V${h}M0 ${h/2}H${w}`} stroke="#44434a" strokeWidth="6"/><path d={`M0 3H${w}M3 0V${h}`} stroke="#72706a" strokeWidth="3"/><rect x="-11" y={h} width={w+22} height="8" fill="#77706a"/></g>;
+function Window({x,y,w=236,h=134,showSunMoon=false,night}:{x:number;y:number;w?:number;h?:number;showSunMoon?:boolean;night:boolean}) {
+ return <g transform={`translate(${x} ${y})`}><rect x="-7" y="-7" width={w+14} height={h+14} fill="#403f46"/><svg width={w} height={h} overflow="hidden"><rect width={w} height={h} fill="url(#sky)"/>{showSunMoon&&(night?<path transform={`translate(${w-42} 27)`} d="M5-14A15 15 0 1 0 5 14A16 16 0 0 1 5-14Z" fill="#f0d6a3" opacity=".9"/>:<circle cx={w-42} cy="27" r="15" fill="#f8df9a" opacity=".9"/>)}{Array.from({length:Math.ceil(w/31)},(_,n)=><g key={n}><rect x={n*31} y={h-55+(n%3)*10} width="25" height="66" fill={n%2?'#262e40':'#30384a'}/>{[0,1,2].map(k=><rect key={k} x={n*31+6} y={h-43+(n%3)*10+k*14} width="4" height="5" fill="#ba9668" opacity={night?(n%2?.4:.7):.12}/>)}</g>)}</svg><path d={`M${w/2} 0V${h}M0 ${h/2}H${w}`} stroke="#44434a" strokeWidth="6"/><path d={`M0 3H${w}M3 0V${h}`} stroke="#72706a" strokeWidth="3"/><rect x="-11" y={h} width={w+22} height="8" fill="#77706a"/></g>;
 }
 function Pendant({x,y}:{x:number;y:number}) {
  return <g transform={`translate(${x} ${y})`}><path d="M0 0V18" stroke="#20252a" strokeWidth="3"/><path d="M-29 31L-14 18H14L29 31Z" fill="#72736b"/><path d="M-26 32H26" stroke="#ead3a1" strokeWidth="3"/><ellipse cy="37" rx="36" ry="10" fill="#eac98d" opacity=".15" filter="url(#glow)"/></g>;
 }
-function DigitalClock() {
+function DigitalClock({onNightChange}:{onNightChange:(night:boolean)=>void}) {
  const [time,setTime]=useState('--:--:--');
+ const lastNight=useRef<boolean|null>(null);
  useEffect(()=>{
-  const formatter=new Intl.DateTimeFormat('en-GB',{timeZone:'Asia/Singapore',hour:'2-digit',minute:'2-digit',second:'2-digit',hourCycle:'h23'});
   let timer:ReturnType<typeof setTimeout>;
   const tick=()=>{
    clearTimeout(timer);
-   setTime(formatter.format(new Date()));
+   const current=getOfficeTime();
+   setTime(current.time);
+   if(lastNight.current!==current.night){lastNight.current=current.night;onNightChange(current.night);}
    if(document.visibilityState==='visible')timer=setTimeout(tick,1000-Date.now()%1000);
   };
   const onVisibility=()=>{if(document.visibilityState==='visible')tick();else clearTimeout(timer);};
   tick();document.addEventListener('visibilitychange',onVisibility);
   return()=>{clearTimeout(timer);document.removeEventListener('visibilitychange',onVisibility);};
- },[]);
+ },[onNightChange]);
  return <g className="office-clock" transform="translate(513 170)" role="img" aria-label={`Singapore time ${time}`} aria-live="off">
   <rect x="-73" y="-29" width="146" height="58" rx="4" fill="#75634f"/>
   <rect x="-69" y="-25" width="138" height="50" rx="2" fill="#1d292c" stroke="#9b8261" strokeWidth="1"/>
@@ -97,7 +100,7 @@ function Actor({agent,index,state,mode,pendingReview,online,selected,onSelect,pa
   <span className="actor-name"><i/>{agent.name}</span>
  </button>;
 }
-export default function Office({states,selected,onSelect,night,paused,reviewed,online=true}:{states:AgentState[];selected:AgentId|null;onSelect:(id:AgentId)=>void;night:boolean;paused:boolean;reviewed:Record<string,string>;online?:boolean}) {
+export default function Office({states,selected,onSelect,night,onNightChange,paused,reviewed,online=true}:{states:AgentState[];selected:AgentId|null;onSelect:(id:AgentId)=>void;night:boolean;onNightChange:(night:boolean)=>void;paused:boolean;reviewed:Record<string,string>;online?:boolean}) {
  const camera=useRef<HTMLDivElement>(null);
  useEffect(()=>{if(selected&&camera.current){const el=camera.current;el.scrollTo({left:el.scrollWidth*places[selected].home/100-el.clientWidth/2,behavior:window.matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});}},[selected]);
  const working=(id:AgentId)=>states.find(s=>s.id===id)?.status==='working';
@@ -114,15 +117,16 @@ export default function Office({states,selected,onSelect,night,paused,reviewed,o
    <rect width="1100" height="800" fill="#22272f"/>
    <rect x="33" y="43" width="1034" height="757" fill="url(#wall)"/><rect x="33" y="43" width="1034" height="535" fill="url(#bricks)"/>
    <path d="M33 42H1067V56H33Z" fill="#736653"/><path d="M33 57H1067" stroke="#b59769" strokeOpacity=".25" strokeWidth="3"/>
-   <Window x={152} y={94} w={264} h={132}/><Window x={606} y={94} w={264} h={132} moon/>
+   <Window x={152} y={94} w={264} h={132} night={night}/><Window x={606} y={94} w={264} h={132} showSunMoon night={night}/>
    <Pendant x={319} y={56}/><Pendant x={759} y={56}/>
    <rect x="33" y="281" width="956" height="48" fill="url(#floor)"/><path d="M26 280H995" stroke="#b09069" strokeWidth="7"/>
    <rect x="26" y="328" width="969" height="23" fill="#493d34"/><path d="M26 329H995" stroke="#c1a27d" strokeWidth="5"/><path d="M33 348H991" stroke="#262b2e" strokeWidth="7"/>
    <Bookcase x={103} y={171}/><Plant x={453} y={268} scale={.8}/><Plant x={912} y={268} scale={.8}/>
-   <DigitalClock/>
+   <g transform="translate(513 118)"><rect x="-73" y="-11" width="146" height="26" rx="2" fill="#292e34" stroke="#73634c"/><text className="office-sign-lettering" textAnchor="middle" y="6">Ryan HQ</text></g>
+   <DigitalClock onNightChange={onNightChange}/>
    <g transform="translate(926 110)"><rect width="49" height="91" fill="#847462"/><rect x="5" y="5" width="39" height="81" fill="#554f4a"/>{['#c6a7df','#8bc6aa','#efb66d','#a6b5ff'].map((color,i)=><g key={color} transform={`translate(${10+i%2*18} ${13+Math.floor(i/2)*30})`}><rect width="13" height="21" fill="#e1d7c0"/><rect y="4" width="13" height="13" fill={color}/><circle cx="6" cy="1" r="2" fill="#c0aa7e"/></g>)}</g>
    <Desk x={319} y={297} color="#efdab0" active={working('manager')} kind="manager"/><Desk x={759} y={297} color="#c6a7df" active={working('designer')} kind="designer"/>
-   {[119,339,559,779].map((x,i)=><Window key={x} x={x} y={395} w={160} h={120} moon={i===2}/>)}
+   {[119,339,559,779].map((x,i)=><Window key={x} x={x} y={395} w={160} h={120} showSunMoon={i===2} night={night}/>)}
    {[209,429,649,869].map(x=><Pendant key={x} x={x} y={351}/>)}
    <path d="M53 57V328M1047 57V800M53 353V800" stroke="#524942" strokeWidth="23"/><path d="M46 57V328M1041 57V800M46 353V800" stroke="#7f6b52" strokeWidth="4"/>
    <rect x="33" y="580" width="1034" height="220" fill="url(#floor)"/><path d="M26 579H1074" stroke="#b09069" strokeWidth="7"/>
@@ -130,7 +134,6 @@ export default function Office({states,selected,onSelect,night,paused,reviewed,o
    {(['scheduler','outreach','contacts'] as const).map(id=><Desk key={id} x={places[id].home*11} y={598} color={agents.find(a=>a.id===id)!.color} active={working(id)}/>)}
    <Desk x={869} y={598} color="#939fa6" empty/>
    <Plant x={95} y={570} scale={.8}/><Plant x={946} y={567} scale={.65}/>
-   <g transform="translate(549 367)"><rect x="-65" y="-9" width="130" height="22" rx="2" fill="#292e34" stroke="#73634c"/><text className="office-sign-lettering" textAnchor="middle" y="6">Ryan HQ</text></g>
    <g transform="translate(123 697)"><ellipse cx="59" cy="43" rx="96" ry="18" fill="#332c2b" opacity=".35"/><rect x="-20" y="-20" width="146" height="47" rx="6" fill="#798578"/><path d="M29-15V25M77-15V25" stroke="#525e54" strokeWidth="3"/><rect x="-25" y="9" width="156" height="30" rx="5" fill="#626b63"/><rect x="-27" y="-1" width="15" height="38" rx="4" fill="#939889"/><rect x="118" y="-1" width="15" height="38" rx="4" fill="#939889"/><rect x="5" y="-7" width="23" height="23" rx="3" fill="#bc9c76"/><path d="M-9 39V48M114 39V48" stroke="#302d2c" strokeWidth="7"/></g>
    <g transform="translate(925 683)"><rect x="-36" y="0" width="78" height="65" rx="3" fill="#62574e"/><rect x="-33" y="4" width="72" height="13" fill="#b3a18b"/><path d="M-31 31H37M-31 49H37" stroke="#39352f" strokeWidth="3"/><path d="M-4 23H11M-4 41H11M-4 59H11" stroke="#b6a48b" strokeWidth="2"/><rect x="-18" y="-36" width="35" height="35" rx="3" fill="#242d32"/><rect x="-13" y="-31" width="25" height="12" fill="#5c6f6d"/><rect x="-9" y="-12" width="18" height="10" fill="#d0bfa1"/></g>
    <Plant x={1030} y={735} scale={1.15}/><Plant x={61} y={747} scale={.85}/>
