@@ -4,6 +4,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { LABELS, parseRecord, validateSnapshot } from '../lib/telemetry.mjs';
 import { PromptRelay } from './prompt-relay.mjs';
+import {RequestBackoff,responseError} from './backoff.mjs';
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 const configPath=process.env.OFFICE_BRIDGE_CONFIG||path.join(root,'.local/bridge.json');
 let config;try{config=JSON.parse(await readFile(configPath,'utf8'));}catch{console.error('Bridge configuration missing. See README.md for setup.');process.exit(1);}
@@ -43,6 +44,7 @@ let stopping=false;
 for(const signal of ['SIGINT','SIGTERM'])process.on(signal,()=>{stopping=true;});
 await mkdir(path.join(root,'.local'),{recursive:true});
 let lastPublished=0,lastFingerprint='',publishing=null;
+const ingestBackoff=new RequestBackoff();
 async function tick(force=false){
  const agents=await Promise.all(config.agents.map(readAgent));
  relay.context={agents,events:[...history.values()].sort((a,b)=>Date.parse(b.at)-Date.parse(a.at)).slice(0,25)};
@@ -53,17 +55,19 @@ async function tick(force=false){
  if(process.argv.includes('--dry-run')){console.log(JSON.stringify(snapshot,null,2));return;}
  if(Object.values(relay.entries).some(e=>e.dirty))await relay.save();
  const fingerprint=JSON.stringify({agents,events});
- if(!force&&fingerprint===lastFingerprint&&Date.now()-lastPublished<20000)return;
- if(publishing)return;
+ if(!force&&fingerprint===lastFingerprint&&Date.now()-lastPublished<60000)return;
+ if(publishing||!ingestBackoff.ready())return;
+ // Bound uploads during rapidly changing chats; local sampling remains 1s.
+ if(!force&&Date.now()-lastPublished<3000)return;
  // One upload at a time; sampling keeps running while the network is busy.
  // The next tick publishes the latest state if it changed during this upload.
- publishing=publish(snapshot,fingerprint,agents).catch(e=>console.error(`${new Date().toISOString()} ${e.message}`)).finally(()=>{publishing=null;});
+ publishing=publish(snapshot,fingerprint,agents).catch(e=>{const delay=ingestBackoff.fail(e);console.error(`${new Date().toISOString()} ${e.message}; retrying in ${Math.ceil(delay/1000)}s`);}).finally(()=>{publishing=null;});
  if(force)await publishing;
 }
 async function publish(snapshot,fingerprint,agents){
  const response=await fetch(endpoint,{method:'POST',headers:{'Authorization':`Bearer ${config.bridgeKey}`,'Content-Type':'application/json'},body:JSON.stringify(snapshot),signal:AbortSignal.timeout(15000)});
- if(!response.ok)throw new Error(`Office returned HTTP ${response.status}`);
- lastPublished=Date.now();lastFingerprint=fingerprint;
+ if(!response.ok)throw await responseError(response,'Office');
+ ingestBackoff.success();lastPublished=Date.now();lastFingerprint=fingerprint;
  await writeFile(path.join(root,'.local/bridge-status.json'),JSON.stringify({lastSync:snapshot.observedAt,agents:agents.map(a=>({id:a.id,status:a.status}))}),{mode:0o600});
  console.log(`${snapshot.observedAt} synced ${agents.length} agents, ${snapshot.events.length} recent events`);
 }
@@ -72,7 +76,7 @@ async function loop(task,interval){
  while(!stopping){const started=Date.now();await safely(task);if(!stopping)await new Promise(r=>setTimeout(r,Math.max(250,interval-(Date.now()-started))));}
 }
 // Observe local logs every second and publish changes immediately; unchanged
-// snapshots keep a twenty-second heartbeat. Prompt pickup never waits for ingest.
+// snapshots keep a sixty-second heartbeat. Prompt pickup never waits for ingest.
 await safely(()=>tick(true));
 if(process.argv.includes('--dry-run'))process.exit(0);
 if(process.argv.includes('--once'))await safely(()=>relay.tick());

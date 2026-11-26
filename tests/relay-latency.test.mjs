@@ -57,3 +57,13 @@ test('partial receipt failure holds the flush guard until the remaining writes f
  const first=r.flushReceipts();const rejected=assert.rejects(first,/Fixture failure/);await Promise.resolve();await Promise.resolve();
  assert.strictEqual(r.flushReceipts(),first);assert.equal(writes,2);release();await rejected;assert.equal(r.receiptTask,null);assert.equal(r.entries[id].dirty,true);assert.equal(r.entries[laterId].dirty,false);
 });
+test('queue and receipt retries perform no network calls during their failure backoff',async t=>{
+ const r=await relay(t);let now=1000;let reads=0,writes=0;
+ r.queueBackoff.now=()=>now;r.queueBackoff.random=()=>0;r.receiptBackoff.now=()=>now;r.receiptBackoff.random=()=>0;
+ r.entries[id]={...command(),status:'replied',reply:'Keep this reply',dirty:true};
+ r.request=async method=>{if(method==='GET'){reads++;throw Object.assign(new Error('Storage unavailable'),{retryAfterMs:30000});}writes++;throw Object.assign(new Error('Storage unavailable'),{retryAfterMs:30000});};
+ await assert.rejects(r.tick(),/Storage unavailable/);assert.equal(reads,1);assert.equal(writes,1);
+ for(let i=0;i<10;i++){await r.tick();await r.flushReceipts();}assert.equal(reads,1);assert.equal(writes,1);assert.equal(r.entries[id].dirty,true);
+ now+=30000;r.request=async method=>{if(method==='GET'){reads++;return {revision:'after',messages:[]};}writes++;return {ok:true};};
+ await r.tick();assert.equal(reads,2);assert.equal(writes,2);assert.equal(r.entries[id].dirty,false);assert.equal(r.queueBackoff.failures,0);assert.equal(r.receiptBackoff.failures,0);
+});

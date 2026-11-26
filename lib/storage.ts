@@ -1,23 +1,31 @@
-import {get,put,list} from '@vercel/blob';
+import {get,put,BlobPreconditionFailedError} from '@vercel/blob';
+import {NextResponse} from 'next/server';
+import {OFFICE_STATE_PATH,checkedState,atomicOfficeUpdate,queueOfficeMessage,saveOfficeReceipt,saveOfficeReview} from './office-store.mjs';
 export async function readJSON(name:string) {const blob=await get(name,{access:'private',useCache:false});if(!blob||blob.statusCode!==200)return null;return new Response(blob.stream).json();}
 export async function writeJSON(name:string,value:unknown,overwrite=true) {return put(name,JSON.stringify(value),{access:'private',addRandomSuffix:false,allowOverwrite:overwrite,contentType:'application/json',cacheControlMaxAge:60});}
-export async function completedReviews() {
- const completed:Record<string,boolean>={};let cursor:string|undefined;
- do {const page=await list({prefix:'office/completion-reviews/',limit:1000,cursor});
-  for(const blob of page.blobs){const match=/^office\/completion-reviews\/((?:scheduler|outreach|contacts|manager)-\d+)\.json$/.exec(blob.pathname);if(match)completed[match[1]]=true;}
-  cursor=page.hasMore?page.cursor:undefined;
- }while(cursor);
- return completed;
+const adapter={
+ async read(){const blob=await get(OFFICE_STATE_PATH,{access:'private',useCache:false});if(!blob||blob.statusCode!==200)return null;return {value:await new Response(blob.stream).json(),etag:blob.blob.etag};},
+ async write(state:unknown,etag:string){await put(OFFICE_STATE_PATH,JSON.stringify(state),{access:'private',addRandomSuffix:false,allowOverwrite:true,ifMatch:etag,contentType:'application/json',cacheControlMaxAge:60});},
+ isConflict(error:unknown){return error instanceof BlobPreconditionFailedError;},
+};
+export async function getOfficeState(){return checkedState((await adapter.read())?.value);}
+export async function readOfficeStateConditional(ifNoneMatch?:string){
+ const blob=await get(OFFICE_STATE_PATH,{access:'private',useCache:false,...(ifNoneMatch?{ifNoneMatch}:{})});
+ if(!blob){checkedState(null);throw new Error('Unreachable');}
+ const etag=blob.blob.etag;
+ if(blob.statusCode===304)return {notModified:true,etag,state:null};
+ return {notModified:false,etag,state:checkedState(await new Response(blob.stream).json())};
 }
-export async function recentCommands(since?:number) {
- const paths:string[]=[];
- // The prompt fast path lists only recent dates and filters on Blob upload time.
- // History and periodic recovery still cover seven days, fully paginated.
- const days=since===undefined?7:Math.min(7,Math.floor((Date.now()-since)/86400000)+2);
- await Promise.all(Array.from({length:days},async(_,day)=>{
-  const date=new Date(Date.now()-day*86400000).toISOString().slice(0,10).replaceAll('-','');let cursor:string|undefined;
-  do {const page=await list({prefix:`office/messages/${date}-`,limit:1000,cursor});paths.push(...page.blobs.filter(b=>since===undefined||b.uploadedAt.getTime()>=since).map(b=>b.pathname));cursor=page.hasMore?page.cursor:undefined;}while(cursor);
- }));
- const messages=await Promise.all(paths.map(async p=>{const m=await readJSON(p);if(!m)return null;const receipt=await readJSON(`office/receipts/${m.id}.json`);return {...m,...receipt};}));
- return messages.filter(Boolean).sort((a,b)=>Date.parse(a.createdAt)-Date.parse(b.createdAt));
+export async function mutateOfficeState(mutate:(state:any)=>{value?:any;changed?:boolean}){return atomicOfficeUpdate(adapter,mutate);}
+export async function enqueueOfficeMessage(message:any,requireManagerParent=false,bridgeReady=true){return mutateOfficeState(state=>queueOfficeMessage(state,message,requireManagerParent,bridgeReady));}
+export async function recordOfficeReceipt(id:string,receipt:any){return mutateOfficeState(state=>saveOfficeReceipt(state,id,receipt));}
+export async function acknowledgeOfficeReview(key:string){return mutateOfficeState(state=>saveOfficeReview(state,key));}
+export function storageErrorResponse(error:unknown,fallback='Office storage unavailable. Retrying shortly.'){
+ const e=error as {name?:string;code?:string;message?:string;status?:number;retryAfter?:number};
+ const known=e?.name==='OfficeStorageError';
+ const paused=e?.name==='BlobStoreSuspendedError'||/quota|usage limit|store.+suspend/i.test(e?.message||'');
+ const code=known?e.code:paused?'STORAGE_LIMIT':'STORAGE_UNAVAILABLE';
+ const message=known?e.message:paused?'Office storage is paused or has reached its usage limit. Check Vercel storage usage.':fallback;
+ const status=known?e.status:503;
+ return NextResponse.json({error:message,code},{status:status||503,headers:{'Cache-Control':'private, no-store',...((status||503)>=500?{'Retry-After':String(Math.max(5,Math.min(3600,e?.retryAfter||30)))}:{})}});
 }

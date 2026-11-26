@@ -13,6 +13,7 @@ const services:Record<AgentId,IntegrationName[][]>={
  outreach:[['contacts','sheets'],['gmail'],['gmail','sheets']],
  contacts:[['contacts'],['gohighlevel'],['sheets']],
  manager:[['codex'],['codex'],['codex']],
+ designer:[['codex'],['codex'],['codex']],
 };
 const Actions=createContext<{open:(id:AgentId)=>void;rename:(id:string,label:string)=>void}|null>(null);
 function AgentNode({id,data,selected}:NodeProps<Node<FlowData>>){
@@ -36,14 +37,19 @@ export default function Workflow({states,onSelect}:{states:AgentState[];onSelect
  const actions=useMemo(()=>({open:onSelect,rename}),[onSelect,rename]);
  useEffect(()=>{try{
   const saved=JSON.parse(localStorage.getItem('ryan-flow-v2')||'null');
-  if(saved?.version!==2||!Array.isArray(saved.nodes)||!Array.isArray(saved.edges)||saved.nodes.length>60)return;
+  if(![2,3].includes(saved?.version)||!Array.isArray(saved.nodes)||!Array.isArray(saved.edges)||saved.nodes.length>63)return;
   const valid=saved.nodes.every(n=>typeof n.id==='string'&&n.type==='agent'&&agents.some(a=>a.id===n.data?.agentId)&&typeof n.data?.label==='string'&&Number.isInteger(n.data?.index)&&Number.isFinite(n.position?.x)&&Number.isFinite(n.position?.y));
-  if(valid){setNodes(saved.nodes);setEdges(saved.edges.filter(e=>saved.nodes.some(n=>n.id===e.source)&&saved.nodes.some(n=>n.id===e.target)));}
+  if(valid){
+   // Keep the saved map, adding the new office agent once for older layouts.
+   const additions=saved.version===2&&!saved.nodes.some(n=>n.data.agentId==='designer')?initialNodes.filter(n=>n.data.agentId==='designer'):[];
+   const restored=[...saved.nodes,...additions];
+   setNodes(restored);setEdges([...saved.edges.filter(e=>saved.nodes.some(n=>n.id===e.source)&&saved.nodes.some(n=>n.id===e.target)),...initialEdges.filter(e=>additions.some(n=>n.id===e.source))]);
+  }
  }catch{}},[setNodes,setEdges]);
  useEffect(()=>{setNodes(ns=>ns.map(n=>({...n,data:{...n.data,status:states.find(s=>s.id===n.data.agentId)?.status||'offline'}})));setEdges(es=>es.map(e=>({...e,animated:states.find(s=>e.source.startsWith(s.id))?.status==='working'})));},[states,setNodes,setEdges]);
  const connect=useCallback((connection:Connection)=>setEdges(es=>addEdge({...connection,style:{stroke:'#b3ad9c'}},es)),[setEdges]);
  function addStep(){const agentId=nodes.find(n=>n.selected)?.data.agentId||'scheduler';const i=agents.findIndex(a=>a.id===agentId);setNodes(ns=>[...ns,{id:`${agentId}-${Date.now()}`,type:'agent',position:{x:80,y:55+i*132},data:{label:'New step',agentId,index:i*3,status:states.find(s=>s.id===agentId)?.status||'idle'}}]);setNotice('Step added');}
- function save(){try{localStorage.setItem('ryan-flow-v2',JSON.stringify({version:2,nodes,edges}));setNotice('Map saved');}catch{setNotice('Could not save this map');}}
+ function save(){try{localStorage.setItem('ryan-flow-v2',JSON.stringify({version:3,nodes,edges}));setNotice('Map saved');}catch{setNotice('Could not save this map');}}
  return <section className="workflow-panel workflow-polished"><div className="workflow-toolbar"><span className="planning-chip" title="Editing this map does not run agents or change their instructions.">Planning map</span><div className="button-group"><button className="subtle-button" disabled={nodes.length>=60} onClick={addStep}><Plus size={15}/>Add step</button><button className="icon-button" title="Reset layout" aria-label="Reset workflow layout" onClick={()=>{setNodes(initialNodes);setEdges(initialEdges);try{localStorage.removeItem('ryan-flow-v2');}catch{}setNotice('Layout reset');}}><RotateCcw size={16}/></button><button className="subtle-button" onClick={save}><Save size={15}/>Save</button></div></div>
   <Actions.Provider value={actions}><div className="flow-canvas"><ReactFlow nodes={nodes} edges={edges} onNodesChange={onNodesChange} onEdgesChange={onEdgesChange} onConnect={connect} nodeTypes={nodeTypes} onNodeDoubleClick={(_,node)=>rename(node.id,node.data.label)} fitView fitViewOptions={{padding:.1}} minZoom={.3} maxZoom={1.8} zoomOnDoubleClick={false} deleteKeyCode={['Backspace','Delete']}><Background gap={22} size={1} color="#64717c"/><Controls/><MiniMap nodeColor={node=>agents.find(a=>a.id===node.data.agentId)?.color||'#aaa'} maskColor="rgba(17,21,26,.55)"/></ReactFlow></div></Actions.Provider>
   {notice&&<div className="workflow-notice" role="status"><Check size={13}/>{notice}<button aria-label="Dismiss map notification" onClick={()=>setNotice('')}><X size={13}/></button></div>}

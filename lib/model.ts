@@ -1,4 +1,4 @@
-export type AgentId = 'scheduler' | 'outreach' | 'contacts' | 'manager';
+export type AgentId = 'scheduler' | 'outreach' | 'contacts' | 'manager' | 'designer';
 export type Status = 'working' | 'idle' | 'waiting' | 'error' | 'offline';
 export type Activity = { id: string; agentId: AgentId; at: string; kind: string; label: string; status: Status };
 export type AgentState = { id: AgentId; status: Status; activity: string; updatedAt: string | null; completedAt?: string | null; attentionAt?: string | null; result?: string | null; sessionStartedAt?: string | null };
@@ -8,5 +8,6 @@ export const agents = [
   { id: 'outreach' as const, name: 'Outreach Ryan', role: 'Email outreach', color: '#efb66d', short: 'OR', integrations: ['Gmail', 'Contact map'], description: 'Turns approved contacts into thoughtful outreach.', steps: ['Pick contacts', 'Prepare outreach', 'Send & record'], thread: '01a1e8ac-499f-7e32-83db-904f2ad4e591' },
   { id: 'contacts' as const, name: 'Network Ryan', role: 'Contacts & GoHighLevel', color: '#8bc6aa', short: 'NR', integrations: ['Contact map', 'GoHighLevel'], description: 'Researches the right people and keeps your CRM in sync.', steps: ['Research contacts', 'Check GoHighLevel', 'Update contact map'], thread: '01a1e798-e941-74f3-9e0b-4bab573ba6c4' },
   { id: 'manager' as const, name: 'Manager Ryan', role: 'Office manager', color: '#efdab0', short: 'MR', integrations: ['Codex', 'All agents'], description: 'Summarizes the office and delegates your requests.', steps: ['Review the office', 'Plan assignments', 'Delegate'], thread: '01a216eb-566e-7dd1-ab32-f5adc3c57f89' },
+  { id: 'designer' as const, name: 'Designer Ryan', role: 'Design & development', color: '#c6a7df', short: 'DR', integrations: ['Codex', 'Ryan HQ'], description: 'Designs and builds your office.', steps: ['Explore the brief', 'Design & build', 'Review & refine'], thread: '01a216a1-1bbb-7750-9489-3ddbbcf002ef' },
 ];
 export const emptyAgents: AgentState[] = agents.map(a => ({ id: a.id, status: 'offline', activity: 'Waiting for the local bridge', updatedAt: null }));
