@@ -1,7 +1,7 @@
 'use client';
 import {useEffect,useId,useMemo,useRef,useState,type CSSProperties,type FormEvent,type MouseEvent} from 'react';
 import {ArrowLeft,ArrowUpRight,CalendarDays,Check,CheckCheck,Clock3,LoaderCircle,PencilLine,Plus,RefreshCw,StickyNote,Undo2,X} from 'lucide-react';
-import {NOTE_COLORS,boardCalendarLink,boardDateLabel,boardDraftChanged,boardDraftFromNote,boardNotesForView,boardMeetingLinks,boardNoteTime,boardSyncLabel,type BoardColor,type BoardCreateInput,type BoardData,type BoardFilter,type BoardNote,type BoardUpdateInput} from '../lib/board-view';
+import {NOTE_COLORS,boardCalendarLink,boardDateLabel,boardDraftChanged,boardDraftFromNote,boardBaseAfterToggle,boardNotesForView,boardMeetingLinks,boardNoteTime,boardSyncLabel,type BoardColor,type BoardCreateInput,type BoardData,type BoardFilter,type BoardNote,type BoardUpdateInput} from '../lib/board-view';
 import styles from './Blackboard.module.css';
 
 export type BlackboardProps={
@@ -87,8 +87,9 @@ export default function Blackboard({data,loading,error,busyIds,onRefresh,onCreat
   try{
    const updated=await onUpdate({id:note.id,version:note.version,patch:{done:!note.done}});
    if(!mounted.current)return;
-   setEditor(current=>current?.id===note.id?{...current,base:updated}:current);
-   setConflict(null);setNotice(updated.done?(updated.source==='calendar'?'Done on this board.':'Marked done.'):'Note reopened.');
+   setEditor(current=>current?.id===note.id?{...current,base:boardBaseAfterToggle(current.base,note,updated)}:current);
+   if(editor?.id!==note.id||editor.base?.version===note.version)setConflict(current=>current?.id===note.id?null:current);
+   setNotice(updated.done?(updated.source==='calendar'?'Done on this board.':'Marked done.'):'Note reopened.');
   }catch(e){if(mounted.current){const collision=conflictNote(e,note.id);setConflict(collision);setMutationError(collision?'This note changed elsewhere. Refresh and try again.':errorMessage(e));}}
   finally{finish(note.id);}
  }

@@ -84,7 +84,7 @@ export default function AgentCreator({onClose,onSaved,initialDraft}:Props){
    <input ref={fileRef} type="file" accept="application/json,.json" className={styles.fileInput} aria-label="Import agent draft JSON" onChange={event=>{void importFile(event.target.files?.[0]);event.target.value='';}}/>
    {view==='builder'&&<nav className={`${styles.stages} ${styles.promptStages}`} aria-label="Agent draft steps">{stages.map((label,index)=><button type="button" key={label} aria-current={step===index?'step':undefined} disabled={index>unlocked} onClick={()=>{setStep(index);setError('');}}><span>{index<step?<Check size={12}/>:index+1}</span>{label}</button>)}</nav>}
    {discard&&<div className={styles.discard} role="alert"><p>Discard your unsaved changes?</p><div><button type="button" ref={keepRef} className={styles.secondary} onClick={cancelDiscard}>Keep editing</button><button type="button" className={styles.danger} onClick={()=>{const action=pendingAction.current;cancelDiscard();setDirty(false);forgetRecovery();action?.();}}>Discard changes</button></div></div>}
-   {error&&<div className={styles.error} role="alert">{error}</div>}
+   {error&&<div className={styles.error} role="alert"><span>{error}</span>{(view==='builder'||view==='customize')&&form.description.trim()&&<button type="button" className={styles.recoveryExport} onClick={exportCurrent}><Download size={14}/>Export draft</button>}</div>}
    {recoveryError&&<div className={styles.error} role="alert">{recoveryError}</div>}
    {notice&&<div className={styles.notice} role="status"><Check size={15}/>{notice}</div>}
    <div className={styles.body} ref={bodyRef}>

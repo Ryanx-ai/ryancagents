@@ -17,6 +17,7 @@ export const SANDBOX_ATTACHMENTS:readonly SandboxAttachment[];
 export const SANDBOX_TEMPLATES:readonly SandboxTemplate[];
 export function sandboxTemplate(id?:string):SandboxTemplate|null;
 export function sandboxNodeRole(node?:SandboxNode):SandboxRole;
+export function sandboxEligibleTargets(graph:SandboxGraph|null|undefined,sourceId:string):SandboxNode[];
 export function createSandboxGraph():SandboxGraph;
 export function validateSandboxGraph(value:unknown):SandboxGraph;
 export function readSandboxGraph(storage?:SandboxStorage):{graph:SandboxGraph|null;error:string|null};

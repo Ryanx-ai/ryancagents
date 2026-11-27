@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {boardNotesForView,boardTodayOpen,boardMeetingLinks,boardCalendarLink} from '../lib/board-view.ts';
+import {boardNotesForView,boardTodayOpen,boardMeetingLinks,boardCalendarLink,boardBaseAfterToggle,boardDraftFromNote,boardDraftChanged} from '../lib/board-view.ts';
 
 const day='2026-11-27';
 function note(id,{start,allDay=false,done=false,date=day,...rest}={}){
@@ -52,4 +52,26 @@ test('meeting links remain bounded even with malformed snapshot data',()=>{
  assert.ok(boardMeetingLinks(event).every(link=>link.label.length===100));
  event.calendar.links=[null,{label:'Too long',url:`https://example.com/${'a'.repeat(2000)}`}];
  assert.deepEqual(boardMeetingLinks(event),[]);
+});
+
+test('Done and Reopen preserve an editing conflict when another device changed the note',()=>{
+ const base=note('shared',{title:'Original task',body:'Original details'});
+ const initial=boardDraftFromNote(base),draft={...initial,title:'My unsaved title'};
+ const remote={...base,version:2,body:'Changed on another device'};
+ const done={...remote,version:3,done:true};
+ const afterDone=boardBaseAfterToggle(base,remote,done);
+ assert.equal(afterDone,base,'a fresh board-list Done does not silently accept the remote content');
+ assert.notEqual(afterDone.version,done.version,'the editor must still display its version conflict');
+ const reopened={...done,version:4,done:false};
+ assert.equal(boardBaseAfterToggle(afterDone,done,reopened),base,'Reopen must retain the same conflict');
+ assert.equal(boardDraftChanged(draft,initial),true);
+ assert.equal(draft.title,'My unsaved title');
+ assert.equal(draft.body,'Original details','the local draft is preserved until explicit conflict resolution');
+});
+
+test('Done advances the editor base only when it used that exact note version',()=>{
+ const base=note('shared');const done={...base,done:true,version:2};
+ assert.equal(boardBaseAfterToggle(base,base,done),done,'a local Done needs no false conflict');
+ assert.equal(boardBaseAfterToggle(base,note('other'),{...done,id:'other'}),base);
+ assert.equal(boardBaseAfterToggle(null,base,done),null);
 });

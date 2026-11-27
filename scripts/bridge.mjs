@@ -30,7 +30,17 @@ async function readAgent(agent){
    for(const line of lines){let record;try{record=JSON.parse(line);}catch{continue;}if(!record||typeof record!=='object')continue;
     const at=Date.parse(record.timestamp);if(typeof record.timestamp!=='string'||!Number.isFinite(at)||at>Date.now()+60000)continue;
     relay.observe(agent.id,record);
-    const current=!state.last||at>=Date.parse(state.last);
+    const payload=record.payload||{};
+    const turnId=typeof payload.turn_id==='string'?payload.turn_id:null;
+    // Background commands can finish hours after their owning turn closed.
+    // Keep those results in history, but never reopen the completed task or
+    // overwrite the state of a newer turn. Unknown/unclosed turns stay visible.
+    const closedTurnTool=record.type==='event_msg'&&payload.type==='item_completed'&&turnId&&state.closedTurns?.has(turnId);
+    const current=(!state.last||at>=Date.parse(state.last))&&!closedTurnTool;
+    if(record.type==='event_msg'&&['task_complete','turn_aborted'].includes(payload.type)&&turnId){
+     state.closedTurns??=new Set();state.closedTurns.add(turnId);
+     if(state.closedTurns.size>256)state.closedTurns.delete(state.closedTurns.values().next().value);
+    }
     const progress=progressFromRecord(record);
     // Public commentary can refine a working caption, but cannot manufacture
     // activity, revive stale presence, or add noise to the activity timeline.
@@ -45,9 +55,11 @@ async function readAgent(agent){
     // Quiet heartbeat endings update presence without replacing useful work or
     // adding another item to the bounded activity/review history.
     if(parsed.kind==='idle')continue;
-    if(parsed.kind==='completed')state.completedAt=record.timestamp;
-    if(record.type==='event_msg'&&record.payload?.type==='task_complete'&&['completed','waiting'].includes(parsed.kind))state.result=Buffer.from(normalizeMessageText(String(record.payload.last_agent_message||'')),'utf8').subarray(0,4000).toString('utf8');
-    if(parsed.status==='waiting'||parsed.status==='error')state.attentionAt=record.timestamp;
+    if(current){
+     if(parsed.kind==='completed')state.completedAt=record.timestamp;
+     if(record.type==='event_msg'&&record.payload?.type==='task_complete'&&['completed','waiting'].includes(parsed.kind))state.result=Buffer.from(normalizeMessageText(String(record.payload.last_agent_message||'')),'utf8').subarray(0,4000).toString('utf8');
+     if(parsed.status==='waiting'||parsed.status==='error')state.attentionAt=record.timestamp;
+    }
     const id=createHash('sha256').update(agent.id+record.timestamp+parsed.kind).digest('hex').slice(0,24);
     history.set(id,{id,agentId:agent.id,at:record.timestamp,...parsed,label:LABELS[parsed.kind]});
    }

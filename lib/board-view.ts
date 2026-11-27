@@ -63,3 +63,8 @@ export function boardMeetingLinks(note:BoardNote):{label:string;url:string}[]{
 }
 export function boardDraftFromNote(note:BoardNote):BoardCreateInput{return {id:note.id,date:note.date,title:note.title,body:note.body,color:note.color};}
 export function boardDraftChanged(draft:BoardCreateInput,initial:BoardCreateInput){return draft.title!==initial.title||draft.body!==initial.body||draft.date!==initial.date||draft.color!==initial.color;}
+// Done/Reopen can advance the revision beneath an editor, but must not accept
+// content from another device on behalf of the person still editing an old copy.
+export function boardBaseAfterToggle(base:BoardNote|null,submitted:BoardNote,updated:BoardNote):BoardNote|null{
+ return base?.id===submitted.id&&base.version===submitted.version&&updated.id===submitted.id&&updated.version>=submitted.version?updated:base;
+}

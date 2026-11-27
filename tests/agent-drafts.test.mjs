@@ -57,6 +57,16 @@ test('quota and unavailable storage errors remain recoverable through JSON expor
  assert.throws(()=>saveAgentDraft(next,storage),/export your draft/);assert.deepEqual(readAgentDrafts(storage).drafts,[first]);assert.doesNotThrow(()=>exportAgentDraft(next));
  assert.ok(readAgentDrafts({getItem:()=>{throw new Error('Blocked');},setItem:()=>{}}).error);
 });
+test('export after a failed edit save retains the latest prompt, name, outfit and colors',()=>{
+ const saved=createAgentDraft(input()),raw=JSON.stringify({version:2,drafts:[saved]});
+ const current={...prompt(),name:'Updated Ryan',description:'The latest edited prompt.',outfit:'designer',palette:{jacket:'#123456',shirt:'#abcdef',pants:'#654321'},requestedConnectors:['calendar','codex']};
+ const storage={getItem:()=>raw,setItem:()=>{throw new Error('Quota exceeded');}};
+ assert.throws(()=>saveAgentDraft(createAgentDraft(current,saved),storage),/export your draft/);
+ const exported=JSON.parse(exportAgentDraft(createAgentDraft(current,saved))).draft;
+ for(const key of ['name','description','workflow','outfit','palette','requestedConnectors'])assert.deepEqual(exported[key],current[key]);
+ assert.equal(exported.id,saved.id);assert.equal(exported.activation,'unavailable');
+ assert.deepEqual(readAgentDrafts(storage).drafts,[saved],'failed save and export leave the saved version intact');
+});
 
 test('full library blocks new drafts but still permits updates and deletion',()=>{
  const drafts=Array.from({length:MAX_AGENT_DRAFTS},(_,index)=>createAgentDraft({...input(),name:`Draft ${index+1}`}));const storage=memory({[AGENT_DRAFTS_KEY]:JSON.stringify({version:1,drafts})});

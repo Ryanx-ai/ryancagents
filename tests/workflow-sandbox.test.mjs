@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {SANDBOX_KEY,MAX_NODES,MAX_EDGES,SANDBOX_TEMPLATES,sandboxTemplate,sandboxNodeRole,createSandboxGraph,validateSandboxGraph,readSandboxGraph,saveSandboxGraph,addSandboxNode,addSandboxTemplate,addSandboxAgentExample,duplicateSandboxNode,updateSandboxNode,removeSandboxNodes,connectSandboxEdge,removeSandboxEdges} from '../lib/workflow-sandbox.mjs';
+import {SANDBOX_KEY,MAX_NODES,MAX_EDGES,SANDBOX_TEMPLATES,sandboxTemplate,sandboxNodeRole,sandboxEligibleTargets,createSandboxGraph,validateSandboxGraph,readSandboxGraph,saveSandboxGraph,addSandboxNode,addSandboxTemplate,addSandboxAgentExample,duplicateSandboxNode,updateSandboxNode,removeSandboxNodes,connectSandboxEdge,removeSandboxEdges} from '../lib/workflow-sandbox.mjs';
 const memory=(initial=null)=>{let raw=initial;return {getItem(key){assert.equal(key,SANDBOX_KEY);return raw;},setItem(key,value){assert.equal(key,SANDBOX_KEY);raw=value;},raw:()=>raw};};
 
 test('sandbox starts as a fresh inert three-step sample',()=>{
@@ -139,6 +139,28 @@ test('attachment ports enforce matching role, AI Agent target and single model/m
  assert.throws(()=>connectSandboxEdge(graph,another.id,agent.id,{attachment:'model'}),/one model/);assert.equal(JSON.stringify(graph),before);
  const tools=addSandboxTemplate(graph,'calendar-tool',{attachId:agent.id});assert.equal(tools.edges.filter(edge=>edge.attachment==='tool').length,2);
  assert.throws(()=>addSandboxTemplate(graph,'ai-memory',{attachId:agent.id}),/one model/);
+});
+test('inspector targets exclude occupied single attachment slots and become available when freed',()=>{
+ let graph=addSandboxAgentExample({version:1,nodes:[],edges:[]});
+ const agent=graph.nodes.find(node=>sandboxNodeRole(node)==='agent');
+ graph=addSandboxTemplate(graph,'ai-chat-model');const model=graph.nodes.at(-1);
+ graph=addSandboxTemplate(graph,'ai-memory');const memory=graph.nodes.at(-1);
+ graph=addSandboxTemplate(graph,'calendar-tool');const tool=graph.nodes.at(-1);
+ const before=JSON.stringify(graph);
+ assert.deepEqual(sandboxEligibleTargets(graph,model.id),[]);
+ assert.deepEqual(sandboxEligibleTargets(graph,memory.id),[]);
+ assert.deepEqual(sandboxEligibleTargets(graph,tool.id).map(node=>node.id),[agent.id],'multiple distinct tool attachments remain eligible');
+ assert.equal(JSON.stringify(graph),before,'reading choices does not change the canvas');
+ for(const [role,source] of [['model',model],['memory',memory]]){
+  const freed=removeSandboxEdges(graph,graph.edges.filter(edge=>edge.target===agent.id&&edge.attachment===role).map(edge=>edge.id));
+  assert.deepEqual(sandboxEligibleTargets(freed,source.id).map(node=>node.id),[agent.id]);
+  const attached=connectSandboxEdge(freed,source.id,agent.id,{attachment:role});
+  assert.deepEqual(sandboxEligibleTargets(attached,source.id),[]);
+ }
+ const connected=connectSandboxEdge(graph,tool.id,agent.id,{attachment:'tool'});
+ assert.deepEqual(sandboxEligibleTargets(connected,tool.id),[],'an existing source-target connection is not offered twice');
+ assert.deepEqual(sandboxEligibleTargets(graph,''),[]);
+ assert.deepEqual(sandboxEligibleTargets(null,'missing'),[]);
 });
 test('attachment branches cannot become sequential paths or be split by a primary action',()=>{
  const graph=addSandboxAgentExample({version:1,nodes:[],edges:[]}),before=JSON.stringify(graph),edge=graph.edges.find(edge=>edge.attachment==='model'),model=graph.nodes.find(node=>node.id===edge.source);
