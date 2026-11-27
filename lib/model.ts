@@ -1,7 +1,7 @@
 export type AgentId = 'scheduler' | 'outreach' | 'contacts' | 'manager' | 'designer' | 'proposal';
 export type Status = 'working' | 'idle' | 'waiting' | 'error' | 'offline';
 export type Activity = { id: string; agentId: AgentId; at: string; kind: string; label: string; status: Status };
-export type AgentState = { id: AgentId; status: Status; activity: string; updatedAt: string | null; completedAt?: string | null; attentionAt?: string | null; result?: string | null; sessionStartedAt?: string | null };
+export type AgentState = { id: AgentId; status: Status; activity: string; progress?: string | null; updatedAt: string | null; completedAt?: string | null; attentionAt?: string | null; result?: string | null; sessionStartedAt?: string | null };
 export type Snapshot = { version: 1; observedAt: string; agents: AgentState[]; events: Activity[] };
 export const agents = [
   { id: 'scheduler' as const, profileDescription: 'Manages your inbox, schedules events, and unsubscribes when needed.', name: 'Inbox Ryan', role: 'Email & calendar', color: '#a6b5ff', short: 'IR', integrations: ['Gmail', 'Google Calendar'], description: 'Keeps the inbox moving and finds a time that works.', steps: ['Read inbox', 'Check availability', 'Reply & schedule'], thread: '01a2104e-4bb2-7da2-a3e7-2255cc8de59c' },

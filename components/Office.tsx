@@ -98,7 +98,7 @@ function Actor({agent,index,state,mode,pendingReview,online,selected,onSelect,on
   {mode==='attention'&&<span className="attention-marker" aria-label="Needs attention">!</span>}
   {celebrating&&<><span className="yay-marker">yay!</span><span className="confetti" aria-hidden="true">{Array.from({length:8},(_,i)=><i key={i} style={{'--i':i} as React.CSSProperties}/>)}</span></>}
   {pendingReview&&!celebrating&&mode!=='attention'&&mode!=='working'&&<span className="review-marker" aria-label="Ready for review">★</span>}
-  {bubble&&<span className="thought-bubble" role="status"><span className="bubble-label">Activity</span><span className="bubble-text">{bubble}</span></span>}
+  {bubble&&<span className="thought-bubble" role="status"><span className="bubble-text">{bubble}</span></span>}
   <span className="sprite-shadow"/><Ryan status={state.status} size={112} pose={pose} still={paused} agentId={agent.id}/>
   <span className={`actor-name ${styles.nameplate}`}><i aria-hidden="true"/><span>{agent.name}</span><button type="button" className={styles.profileButton} onClick={onProfile} aria-label={`View ${agent.name} profile`} aria-haspopup="dialog" title={`View ${agent.name} profile`}><span aria-hidden="true">i</span></button></span>
  </div>;

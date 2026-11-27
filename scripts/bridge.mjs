@@ -4,6 +4,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { LABELS, parseRecord, validateSnapshot } from '../lib/telemetry.mjs';
 import {normalizeMessageText} from '../lib/message-content.mjs';
+import {progressFromRecord,isPublicCommentaryRecord} from '../lib/progress.mjs';
 import { PromptRelay } from './prompt-relay.mjs';
 import {RequestBackoff,responseError} from './backoff.mjs';
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
@@ -26,9 +27,21 @@ async function readAgent(agent){
    try{await file.read(buffer,0,length,start);}finally{await file.close();}
    let text=(initial?'':state.carry)+buffer.toString('utf8');if(initial&&start>0)text=text.slice(text.indexOf('\n')+1);
    const lines=text.split('\n');state.carry=lines.pop()||'';state.offset=start+length;
-   for(const line of lines){let record;try{record=JSON.parse(line);}catch{continue;}relay.observe(agent.id,record);const parsed=parseRecord(record);if(!parsed||!record.timestamp)continue;
-    const at=Date.parse(record.timestamp);if(!Number.isFinite(at))continue;
-    if(!state.last||at>=Date.parse(state.last)){state.last=record.timestamp;state.status=parsed.status;state.activity=LABELS[parsed.kind];}
+   for(const line of lines){let record;try{record=JSON.parse(line);}catch{continue;}if(!record||typeof record!=='object')continue;
+    const at=Date.parse(record.timestamp);if(typeof record.timestamp!=='string'||!Number.isFinite(at)||at>Date.now()+60000)continue;
+    relay.observe(agent.id,record);
+    const current=!state.last||at>=Date.parse(state.last);
+    const progress=progressFromRecord(record);
+    // Public commentary can refine a working caption, but cannot manufacture
+    // activity, revive stale presence, or add noise to the activity timeline.
+    // An unmatched newer public update clears the caption; its timestamp still
+    // advances the hint watermark so delayed older text cannot restore it.
+    if(isPublicCommentaryRecord(record)&&current&&state.status==='working'&&(!state.progressAt||at>=Date.parse(state.progressAt))){state.progress=progress;state.progressAt=record.timestamp;}
+    const parsed=parseRecord(record);if(!parsed)continue;
+    if(current){
+     state.last=record.timestamp;state.status=parsed.status;state.activity=LABELS[parsed.kind];
+     if(record.type==='event_msg'&&['task_started','task_complete','turn_aborted'].includes(record.payload?.type)){state.progress=null;state.progressAt=null;}
+    }
     // Quiet heartbeat endings update presence without replacing useful work or
     // adding another item to the bounded activity/review history.
     if(parsed.kind==='idle')continue;
@@ -41,8 +54,9 @@ async function readAgent(agent){
   }
   sources.set(agent.id,state);
   const old=state.last&&Date.now()-Date.parse(state.last)>10*60*1000;
-  return {id:agent.id,status:old&&state.status==='working'?'waiting':state.status,activity:old&&state.status==='working'?LABELS.waiting:state.activity,updatedAt:state.last,completedAt:state.completedAt||null,attentionAt:state.attentionAt||null,result:state.result||null};
- }catch{ return {id:agent.id,status:'offline',activity:LABELS.idle,updatedAt:null}; }
+  const progress=state.status==='working'&&!old&&state.progressAt&&Date.now()-Date.parse(state.progressAt)<=3*60*1000?state.progress||null:null;
+  return {id:agent.id,status:old&&state.status==='working'?'waiting':state.status,activity:old&&state.status==='working'?LABELS.waiting:state.activity,updatedAt:state.last,completedAt:state.completedAt||null,attentionAt:state.attentionAt||null,result:state.result||null,progress};
+ }catch{ return {id:agent.id,status:'offline',activity:LABELS.idle,updatedAt:null,progress:null}; }
 }
 let stopping=false;
 for(const signal of ['SIGINT','SIGTERM'])process.on(signal,()=>{stopping=true;});

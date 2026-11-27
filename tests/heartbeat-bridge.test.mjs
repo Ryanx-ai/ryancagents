@@ -22,7 +22,7 @@ test('bridge preserves actionable work through quiet runs and exposes meaningful
  for(const subdir of ['lib','scripts','.local'])await mkdir(path.join(directory,subdir));
  // Execute the real bridge in dry-run mode, isolated from user journals/config.
  // No server request or Codex command runs in this fixture.
- for(const name of ['scripts/bridge.mjs','scripts/prompt-relay.mjs','scripts/manager.mjs','scripts/backoff.mjs','lib/telemetry.mjs','lib/game-state.mjs','lib/message-content.mjs'])await copyFile(new URL(`../${name}`,import.meta.url),path.join(directory,name));
+ for(const name of ['scripts/bridge.mjs','scripts/prompt-relay.mjs','scripts/manager.mjs','scripts/backoff.mjs','lib/telemetry.mjs','lib/game-state.mjs','lib/message-content.mjs','lib/progress.mjs'])await copyFile(new URL(`../${name}`,import.meta.url),path.join(directory,name));
  const now=Date.now(),old=new Date(now-30000).toISOString(),started=new Date(now-2000).toISOString(),at=new Date(now).toISOString();
  const start={type:'event_msg',timestamp:started,payload:{type:'task_started'}};
  const logs={
