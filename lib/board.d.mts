@@ -1,5 +1,6 @@
 export type BoardColor='yellow'|'peach'|'mint'|'blue'|'lavender';
-export type BoardCalendarMeta={eventId:string;calendarId:string;accountId:string;start:string;end:string;allDay:boolean;url?:string};
+export type BoardCalendarLink={label:string;url:string};
+export type BoardCalendarMeta={eventId:string;calendarId:string;accountId:string;start:string;end:string;allDay:boolean;url?:string;links?:BoardCalendarLink[]};
 export type BoardNote={id:string;source:'manual'|'calendar';date:string;title:string;body:string;color:BoardColor;done:boolean;version:number;createdAt:string;updatedAt:string;calendar?:BoardCalendarMeta};
 export type BoardNoteDraft={id:string;date:string;title:string;body:string;color:BoardColor};
 export type BoardPatch={title?:string;body?:string;color?:BoardColor;date?:string;done?:boolean};

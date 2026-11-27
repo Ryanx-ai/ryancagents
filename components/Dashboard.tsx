@@ -6,6 +6,7 @@ import Office,{Ryan} from './Office';
 import CharacterCard from './CharacterCard';
 import {WardrobeProvider} from './WardrobeProvider';
 import {useBlackboard} from './useBlackboard';
+import {boardNotesForView} from '../lib/board-view';
 import profileStyles from './DashboardProfiles.module.css';
 import MessageContent from './MessageContent';
 import IntegrationLogo,{integrationMeta} from './IntegrationLogo';
@@ -106,7 +107,7 @@ function OfficeDashboard(){
  },[lockOffice]);
  const boardDay=now?new Date(now+8*60*60*1000).toISOString().slice(0,10):'';
  const board=useBlackboard(demo?null:sessionToken,boardDay,request);
- const todayNotes=(board.data?.notes||[]).filter(note=>note.date===boardDay).sort((a,b)=>Number(a.done)-Number(b.done));
+ const todayNotes=board.data?boardNotesForView({...board.data,day:boardDay},'today'):[];
  function openBoard(){setSelected(null);setPanel(null);setBoardOpen(true);void board.refresh(false);}
  const refresh=useCallback(async()=>{
   const token=tokenRef.current;if(!token)return 10000;const sequence=++refreshSequence.current;
@@ -181,7 +182,7 @@ function OfficeDashboard(){
  }
  async function toggleFullscreen(){try{if(document.fullscreenElement)await document.exitFullscreen();else await document.documentElement.requestFullscreen();}catch{setError('Fullscreen is unavailable in this browser.');}}
  return <div className={`game-shell ${unlock?'office-locked':''}`}><div className="office-stage" inert={unlock} aria-hidden={unlock?true:undefined}>
-  <Office states={states} selected={selected} onSelect={choose} onProfile={setProfile} night={night} onNightChange={setNight} paused={paused||unlock||!!profile||!!wardrobe||creatingAgent||boardOpen} reviewed={reviews} online={online} boardNotes={todayNotes} onBoard={openBoard}/>
+  <Office states={states} selected={selected} onSelect={choose} onProfile={setProfile} night={night} onNightChange={setNight} paused={paused||unlock||!!profile||!!wardrobe||creatingAgent||boardOpen} reviewed={reviews} online={online} boardNotes={todayNotes} boardDay={boardDay} onBoard={openBoard}/>
   <div className="hud-top-left"><button className="hq-badge" onClick={()=>{setSelected(null);setPanel(null);}} aria-label="Office"><span>r.</span><strong>HQ</strong></button>{demo&&<button className="demo-badge" onClick={()=>setDemo(false)}>Demo <X size={12}/></button>}</div>
   <div className="hud-top-right"><button className={`signal-badge ${online?'connected':''}`} title={connection==='locked'?'Unlock office':online?'Bridge connected':serviceError||'Bridge offline'} onClick={()=>openPanel('settings')}><i/>{connection==='locked'&&!demo?<LockKeyhole size={13}/>:<Radio size={14}/>}</button><span className="hud-button" role="img" aria-label={night?'Nighttime, Singapore time':'Daytime, Singapore time'} title={night?'Night · 7pm–7am SGT':'Day · 7am–7pm SGT'}>{night?<Moon size={18}/>:<Sun size={18}/>}</span><Button label={fullscreen?'Exit fullscreen':'Fullscreen'} onClick={()=>void toggleFullscreen()}>{fullscreen?<Minimize size={17}/>:<Maximize size={17}/>}</Button></div>
   <div className={`hud-bottom ${profileStyles.loadout}`}><div className="agent-switcher">{agents.map(a=>{const s=states.find(s=>s.id===a.id)!;const m=avatarMode(s,reviews,online);return <button key={a.id} title={a.name} aria-label={`Select ${a.name}`} className={`avatar-shortcut ${selected===a.id?'active':''}`} onClick={()=>choose(a.id)} style={{'--agent-color':a.color} as React.CSSProperties}><Ryan size={54} still agentId={a.id}/><span className="shortcut-status">{m==='attention'?'!':needsReview(s,reviews)?'★':m==='working'?'•':''}</span></button>;})}<button type="button" className={`avatar-shortcut ${profileStyles.addAgent}`} aria-label="Create agent" title="Create agent" onClick={()=>setCreatingAgent(true)}><Plus size={21} strokeWidth={1.5} aria-hidden="true"/></button></div><div className="hud-dock"><Button label="Activity" active={panel==='activity'} badge={attention+celebrations} onClick={()=>openPanel('activity')}><Activity size={19}/></Button><Button label="Workflows" active={panel==='workflow'} onClick={()=>openPanel('workflow')}><GitBranch size={19}/></Button><Button label="Stats" badge={toReview} active={panel==='stats'} onClick={()=>openPanel('stats')}><BarChart3 size={19}/></Button><Button label="Blackboard" active={boardOpen} onClick={openBoard}><ClipboardList size={19}/></Button><span className="dock-divider"/><Button label={paused?'Resume animations':'Pause animations'} active={paused} onClick={()=>setPaused(v=>!v)}>{paused?<Play size={17}/>:<Pause size={17}/>}</Button><Button label="Settings" active={panel==='settings'} onClick={()=>openPanel('settings')}><SlidersHorizontal size={19}/></Button></div></div>

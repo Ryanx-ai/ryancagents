@@ -36,6 +36,8 @@ type BoardResponse = {
 
 `BoardNote` fields are `id`, `source` (`manual`/`calendar`), `date`, `title`, `body`, `color`, `done`, `version`, `createdAt`, `updatedAt`, and optional `calendar`. Colors: `yellow`, `peach`, `mint`, `blue`, `lavender`. Titles allow 1–160 characters; bodies 0–2,000. Dates must be valid ISO dates in 2000–2099. Shared types live in [`lib/board.d.mts`](../lib/board.d.mts).
 
+Calendar `body` contains readable source description text, not generated meeting minutes. Optional `calendar.links` contains up to eight `{label, url}` objects: labels are 1–100 characters and URLs at most 2,000 characters, HTTPS only, without credentials or control characters. `calendar.url` remains the separate, strictly validated Google Calendar source link. Missing `links` is valid for older stored boards and snapshots; empty arrays normalize to omission. Link or description changes update the note version while preserving its board-only Done/color flags.
+
 `POST /api/board` accepts `{id, date, title, body, color}`. Generate a UUID v4 once in the browser and reuse it after ambiguous failures. New notes start open at version 1. Response: `201 {note}`; repeating the original create returns `200 {note}` even if that note was subsequently edited. Reusing its ID for different initial content returns 409.
 
 `PATCH /api/board` accepts `{id, version, patch}`. Manual patches may change `title`, `body`, `date`, `color`, `done`; calendar patches permit only `color` and `done`. Response: `{note}`. Stale versions return `409 {error, code:'NOTE_CONFLICT', current}`. Preserve the user's unsaved form and explicitly reconcile it with `current`; do not automatically overwrite the newer note. No-op updates perform no write. A calendar item removed by a complete source refresh returns 404 when updated.
@@ -62,7 +64,8 @@ Successful wire shape (replace the example date/times and account IDs with the a
     {
       "eventId": "stable-google-event-or-occurrence-id",
       "title": "Example meeting",
-      "body": "",
+      "body": "Review the source agenda before the meeting.",
+      "links": [{"label": "Agenda", "url": "https://docs.example.com/agenda"}],
       "start": "2026-11-27T11:30:00+08:00",
       "end": "2026-11-27T12:00:00+08:00",
       "allDay": false
@@ -72,6 +75,10 @@ Successful wire shape (replace the example date/times and account IDs with the a
 ```
 
 Optional `url` must be an HTTPS Google Calendar event link. Timed events need explicit timezone offsets; all-day events use ISO dates with an **exclusive** end date. Every active event must overlap the specified SGT day. Use each recurring occurrence's stable event ID, not its title or only its series ID. Identical titles do not identify events. An explicit cancelled record may be `{eventId, status:'cancelled'}`; absent/cancelled/moved-out events disappear when the next complete snapshot replaces the previous rows. Board acknowledgement flags remain keyed by account + calendar + event ID, so title changes and later reappearance do not reset them.
+
+The optional wire `links` field maps to `calendar.links` in viewer notes. Invalid link arrays reject the snapshot rather than silently storing unsafe content. Duplicate normalized URLs are coalesced. These are display links, not instructions to fetch or invoke their destinations; booking/cancellation links can perform actions when deliberately opened by the user and must retain accurate source labels.
+
+[`extractCalendarDetails(event)`](../lib/calendar-details.mjs) is a pure, dependency-free helper returning `{body, links}` from a **full event read**. Search/list summaries may omit descriptions, so use the connector's `read_event`/`batch_read_event` equivalent when the complete details have not already been fetched. The helper converts description HTML into bounded plain text, removes script/style and other active blocks, decodes common HTML entities, and extracts safe anchor/plain HTTPS links. It also accepts a location only when the whole field is an HTTPS URL, `hangout_link`/`hangoutLink`, and video/more `conferenceData.entryPoints[].uri`. It does not copy attendee/phone fields, fetch links, or execute HTML. Description text already containing contact information remains source text. Use actual anchor text or a short immediately preceding label; otherwise use the URL host (Google Meet for `meet.google.com`). Never call every link “Join meeting.” Render the returned body as text, never HTML.
 
 `observedAt` must be timezone-qualified, at most two hours old or one minute ahead, and describe today's SGT day. An older observation than the latest persisted attempt is rejected. Different content at the same observation time is rejected. The pure `validateCalendarSnapshot(value, scope, now?)` export returns a normalized **wire-safe** snapshot; publishers may serialize that return value.
 

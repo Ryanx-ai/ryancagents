@@ -111,3 +111,24 @@ test('calendar ingest and user acknowledgements merge through concurrent CAS wri
  const acknowledgement=results[0];if(acknowledgement.status==='rejected')assert.equal(acknowledgement.reason.code,'NOTE_CONFLICT');else assert.equal(f.state.calendar[0].done,true);
  assert.equal(f.state.calendar[0].title,'Updated source');checkedBoardState(f.state);
 });
+test('optional calendar links preserve legacy boards and acknowledgements through updates',async()=>{
+ const f=fixture();await update(f,s=>calendar(s,snapshot()));const legacy=structuredClone(f.state),id=f.state.calendar[0].id;
+ assert.ok(!Object.hasOwn(checkedBoardState(legacy).calendar[0].calendar,'links'));
+ await update(f,s=>updateBoardNote(s,{id,version:1,patch:{done:true}},NOW+1));
+ const links=[{label:' Agenda ',url:'https://DOCS.example.com:443/plan'},{label:'Duplicate',url:'https://docs.example.com/plan'}];
+ const enriched=snapshot([event({body:'Source meeting notes',url:'https://calendar.google.com/calendar/event?eid=fixture',links})],{observedAt:new Date(NOW+60000).toISOString()});
+ await update(f,s=>calendar(s,enriched,NOW+60000));
+ const note=boardView(f.state,undefined,NOW+60000).notes[0];
+ assert.equal(note.id,id);assert.equal(note.done,true);assert.equal(note.version,3);assert.equal(note.body,'Source meeting notes');assert.equal(note.calendar.url,'https://calendar.google.com/calendar/event?eid=fixture');
+ assert.deepEqual(note.calendar.links,[{label:'Agenda',url:'https://docs.example.com/plan'}]);
+ const writes=f.writes;await update(f,s=>calendar(s,enriched,NOW+60000));assert.equal(f.writes,writes);
+ await assert.rejects(update(f,s=>updateBoardNote(s,{id,version:3,patch:{links:[]}},NOW+60000)),e=>e.code==='BOARD_INPUT');
+ const changed=snapshot([event({links:[{label:'Updated agenda',url:'https://docs.example.com/new'}]})],{observedAt:new Date(NOW+120000).toISOString()});
+ await update(f,s=>calendar(s,changed,NOW+120000));assert.equal(f.state.calendar[0].done,true);assert.equal(f.state.calendar[0].version,4);assert.equal(f.state.calendar[0].calendar.links[0].url,'https://docs.example.com/new');
+});
+test('unsafe wire or persisted calendar links fail closed without replacing existing notes',async()=>{
+ for(const links of [null,[{label:'Bad',url:'javascript:alert(1)'}],[{label:'Bad',url:'https://user:password@example.com'}],Array(9).fill({label:'Too many',url:'https://example.com'}),[{label:'Unknown field',url:'https://example.com',secret:'no'}]])assert.throws(()=>validateCalendarSnapshot(snapshot([event({links})]),scope,NOW));
+ const state=newBoardState();calendar(state,snapshot());state.calendar[0].calendar.links=[{label:'Invalid persisted data',url:'http://example.com'}];
+ const f=fixture(state);await assert.rejects(update(f,s=>createBoardNote(s,create(),NOW)),e=>e.code==='BOARD_STORAGE_INVALID');assert.equal(f.writes,0);assert.deepEqual(f.state,state);
+ const noLinks=validateCalendarSnapshot(snapshot([event()]),scope,NOW),emptyLinks=validateCalendarSnapshot(snapshot([event({links:[]})]),scope,NOW);assert.deepEqual(noLinks,emptyLinks);
+});

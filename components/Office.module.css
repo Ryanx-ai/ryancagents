@@ -78,9 +78,11 @@
 .blackboard:hover { border-color:#b09268; }
 .blackboard:focus-visible { outline:3px solid #f2d394; outline-offset:5px; }
 .boardTitle { display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid #e1dfc733; padding-bottom:6px; font-family:'Space Grotesk',sans-serif; font-size:clamp(12px,1vw,18px); }
-.boardTitle>span { font-size:11px; opacity:.7; }
+.boardTitle>time { font-size:clamp(9px,.75vw,12px); font-weight:400; opacity:.85; white-space:nowrap; }
 .boardPapers { display:grid; grid-template-columns:1fr 1fr; gap:8px; flex:1; min-height:0; padding:9px 0 0; }
-.boardPaper { min-width:0; overflow:hidden; display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; padding:7px 5px; background:var(--paper-color); color:#303a34; box-shadow:1px 3px 0 #1115; transform:rotate(var(--paper-tilt)); font-size:clamp(8px,.65vw,11px); line-height:1.3; overflow-wrap:anywhere; }
+.boardPaper { min-width:0; overflow:hidden; padding:7px 5px; background:var(--paper-color); color:#303a34; box-shadow:1px 3px 0 #1115; transform:rotate(var(--paper-tilt)); font-size:clamp(8px,.65vw,11px); line-height:1.3; overflow-wrap:anywhere; }
+.boardPaperTime { display:block; margin-bottom:3px; font-weight:750; font-variant-numeric:tabular-nums; }
+.boardPaperText { display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
 .paperDone { opacity:.55; text-decoration:line-through; }
 .boardEmpty { grid-column:1/-1; align-self:center; justify-self:center; font-size:11px; color:#c8d3bf; }
 .boardEmpty>span { display:block; text-align:center; margin-top:5px; font-size:22px; opacity:.5; }

@@ -10,7 +10,11 @@ The publisher is a script called by that existing cycle, not a new background wo
 
 ## Private input
 
-Atomically replace `.local/board-calendar-input.json` (mode `0600`, ignored by Git). The directory is private and ignored. Never write event details into repository docs, fixtures, public assets, or general worker reports. Use only the minimum display data: title, stable event ID, start/end, all-day flag, and the source Calendar link. Omit bodies, attendees, email addresses beyond the configured account identity, phone numbers, locations, and meeting join tokens.
+Atomically replace `.local/board-calendar-input.json` (mode `0600`, ignored by Git). The directory is private and ignored. Never write real event details into repository docs, fixtures, public assets, or general worker reports. The user has authorized source descriptions and meeting links on this private board. Include title, stable event ID, start/end, all-day flag, source Calendar URL, readable description in `body`, and optional safe `links`. Do not independently copy attendee lists, phone fields or physical locations. Contact information already inside an authorized source description remains source text; it is not synthesized or enriched.
+
+Search results can contain empty descriptions even when the full event has booking notes. Reuse a full event response when available; otherwise read each relevant event with the connector's `read_event`/`batch_read_event` before publishing. If that required detail read fails, publish an error snapshot and keep the last good board rather than replacing notes with incomplete details. Full event responses may use `url` for the Google Calendar source link while search results use `web_link`; preserve the actual Google Calendar URL and stable ID.
+
+Use `extractCalendarDetails(event)` from `lib/calendar-details.mjs` to produce `{body, links}`. The publisher runs directly from the repository; the helper has no external package dependencies. It removes active HTML blocks, extracts readable text up to 2,000 characters and at most eight HTTPS links, and does not fetch or click anything. Source anchors and short preceding labels distinguish Agenda, Reschedule and Cancel; fallback labels use the URL host. HTTPS Google Meet URLs can be labeled Google Meet. Never invent meeting minutes, attendee acceptance, or a “Join meeting” action for a booking/cancel URL. Source `url` remains separate from `links`. See [the exact validation contract](./BOARD-CONTRACT.md).
 
 ```json
 {
@@ -26,6 +30,8 @@ Atomically replace `.local/board-calendar-input.json` (mode `0600`, ignored by G
     {
       "eventId": "original Google event ID",
       "title": "minimal event title",
+      "body": "readable source description, when present",
+      "links": [{"label": "Agenda", "url": "https://docs.example.com/agenda"}],
       "start": "ISO timestamp or all-day YYYY-MM-DD",
       "end": "ISO timestamp or exclusive all-day YYYY-MM-DD",
       "allDay": false,

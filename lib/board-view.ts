@@ -31,11 +31,35 @@ export function boardSyncLabel(calendar:BoardCalendarState){
  return last?`Calendar ${calendar.status==='error'?'update failed':'needs an update'} · last sync ${last}`:`Calendar ${calendar.status==='error'?'update failed':'needs an update'}`;
 }
 export function boardNotesForView(data:BoardData,filter:BoardFilter){
- return data.notes.filter(note=>filter==='today'?note.date===data.day:filter==='done'?note.done:!note.done).sort((a,b)=>Number(a.done)-Number(b.done)||a.date.localeCompare(b.date)||(a.calendar?.start||a.createdAt).localeCompare(b.calendar?.start||b.createdAt)||a.id.localeCompare(b.id));
+ return data.notes.filter(note=>filter==='today'?note.date===data.day:filter==='done'?note.done:!note.done).sort((a,b)=>{
+  const day=a.date.localeCompare(b.date);if(day)return day;
+  const aCalendar=a.source==='calendar',bCalendar=b.source==='calendar';
+  if(aCalendar!==bCalendar)return aCalendar?-1:1;
+  if(aCalendar&&bCalendar){
+   const allDay=Number(!!b.calendar?.allDay)-Number(!!a.calendar?.allDay);if(allDay)return allDay;
+   const startA=Date.parse(a.calendar?.start||''),startB=Date.parse(b.calendar?.start||'');
+   if(Number.isFinite(startA)&&Number.isFinite(startB)&&startA!==startB)return startA-startB;
+  }
+  return a.createdAt.localeCompare(b.createdAt)||a.id.localeCompare(b.id);
+ });
 }
-export function boardTodayOpen(data:BoardData|null){return data?.notes.filter(note=>note.date===data.day&&!note.done)||[];}
+export function boardTodayOpen(data:BoardData|null){return data?boardNotesForView(data,'today').filter(note=>!note.done):[];}
 export function boardCalendarLink(note:BoardNote){
  try{const url=new URL(note.calendar?.url||'');return url.protocol==='https:'&&(url.hostname==='calendar.google.com'||['google.com','www.google.com'].includes(url.hostname)&&url.pathname.startsWith('/calendar/'))?url.href:null;}catch{return null;}
+}
+export function boardMeetingLinks(note:BoardNote):{label:string;url:string}[]{
+ const links=note.calendar?.links;if(!Array.isArray(links))return [];
+ const seen=new Set<string>(),result:{label:string;url:string}[]=[];
+ for(const link of links.slice(0,8)){
+  if(!link||typeof link.url!=='string'||link.url.length>2000||/[\u0000-\u001f\u007f]/.test(link.url))continue;
+  try{
+   const url=new URL(link.url);if(url.protocol!=='https:'||url.username||url.password||seen.has(url.href))continue;
+   seen.add(url.href);
+   const label=typeof link.label==='string'?link.label.replace(/[\u0000-\u001f\u007f]/g,' ').trim().slice(0,100):'';
+   result.push({label:label||url.hostname,url:url.href});
+  }catch{}
+ }
+ return result;
 }
 export function boardDraftFromNote(note:BoardNote):BoardCreateInput{return {id:note.id,date:note.date,title:note.title,body:note.body,color:note.color};}
 export function boardDraftChanged(draft:BoardCreateInput,initial:BoardCreateInput){return draft.title!==initial.title||draft.body!==initial.body||draft.date!==initial.date||draft.color!==initial.color;}
