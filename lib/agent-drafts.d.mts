@@ -1,10 +1,11 @@
 import type {Palette} from './wardrobe.mjs';
 export type ConnectorId='gmail'|'calendar'|'contacts'|'sheets'|'gohighlevel'|'studio'|'codex';
 export type Outfit='standard'|'manager'|'designer';
-export type DraftInput={name:string;description:string;workflow:{trigger:string;input:string;steps:string[];output:string};outfit:Outfit;palette?:Palette;requestedConnectors:ConnectorId[]};
-export type AgentDraft=DraftInput&{schemaVersion:1;id:string;status:'draft';connectorVerification:'not_verified';activation:'unavailable';createdAt:string;updatedAt:string};
+export type DraftWorkflow={trigger:string;input:string;steps:string[];output:string};
+export type DraftInput={name:string;description:string;workflow:DraftWorkflow|null;outfit:Outfit;palette?:Palette;requestedConnectors:ConnectorId[]};
+export type AgentDraft=DraftInput&{schemaVersion:1|2;id:string;status:'draft';connectorVerification:'not_verified';activation:'unavailable';createdAt:string;updatedAt:string};
 export type DraftStorage={getItem(key:string):string|null;setItem(key:string,value:string):void};
-export type DraftRecovery={version:1;form:DraftInput;editing:AgentDraft|null;step:number;unlocked:number};
+export type DraftRecovery={version:2;form:DraftInput;editing:AgentDraft|null;step:number;unlocked:number;view:'builder'|'customize'};
 export type RecoveryStorage=DraftStorage&{removeItem(key:string):void};
 export const AGENT_DRAFTS_KEY:string;
 export const AGENT_DRAFT_RECOVERY_KEY:string;

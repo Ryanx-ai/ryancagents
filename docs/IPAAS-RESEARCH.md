@@ -32,7 +32,19 @@ Zapier’s Test action can perform the action in the connected application. A co
 4. **Revise.** Duplicate copies a step’s settings under a new identity without duplicating connections. Delete removes incident connections. Undo restores a whole insertion, deletion, drag or grouped inspector edit. Clear canvas is also undoable during the current session.
 5. **Connect.** Drag output to input, or use the From/To form. Self-connections are rejected, duplicate connections are a no-op, and cycles are permitted as diagrams. No branch condition is evaluated.
 
-The 18 templates cover manual and scheduled starts; Gmail discovery, search, drafting and sending; Calendar availability and events; Sheets lookups and rows; contact research; a GHL contact update; a Codex brief; a Proposal Studio handoff; condition, wait, review and output steps. These names describe possible designs. GHL is explicitly unconnected; Codex templates do not call a model; Studio templates do not create a proposal; wait and schedule templates do not register timers.
+The base templates cover manual and scheduled starts; Gmail discovery, search, drafting and sending; Calendar availability and events; Sheets lookups and rows; contact research; a GHL contact update; a Codex brief; a Proposal Studio handoff; condition, wait, review and output steps. These names describe possible designs. GHL is explicitly unconnected; Codex templates do not call a model; Studio templates do not create a proposal; wait and schedule templates do not register timers.
+
+## AI Agent diagram refinement
+
+n8n distinguishes a cluster’s root node from sub-nodes that supply services or resources. Its functioning AI Agent connects a chat model and tools. This supports a clearer visual distinction than drawing every dependency as another sequential step. [n8n cluster nodes](https://docs.n8n.io/integrations/builtin/cluster-nodes), [n8n AI Agent](https://docs.n8n.io/integrations/builtin/cluster-nodes/root-nodes/n8n-nodes-langchain.agent)
+
+Dummy Ryan now starts new, unsaved canvases with a compact manual trigger → AI Agent → draft-email path. A circular Chat Model, a memory node and a smaller tool node sit below the agent. Dedicated bottom ports label Chat Model, Memory and Tool; solid lines indicate the main sequence and dashed curves indicate attachments. These shapes explain a proposed architecture; they do not indicate authentication, execution, stored conversations or a configured model. There are no success checks or simulated results.
+
+The AI & tools picker adds seven diagram templates: AI Agent, Chat Model, Simple Memory, Custom Tool, Gmail lookup tool, Sheets lookup tool and Calendar tool. An attachment-port plus filters the picker to the matching role. Existing main-path next-step and insertion controls exclude attachment templates. The From/To form remains a keyboard alternative: selecting an attachment offers only AI Agent targets and chooses the matching port.
+
+Graph version 1 is retained. Node roles derive from known template IDs rather than arbitrary imported role claims. Only attachment edges gain an optional `attachment` value. Validation requires matching model/memory/tool source roles and an AI Agent target, allows one model and one memory per agent, and permits multiple tools. These are intentionally bounded diagram rules, not a promise to reproduce every n8n execution feature. Attachment edges cannot be split by a main-path action. Removing an agent removes its edges but keeps orphaned attachment nodes available for reuse.
+
+Saved diagrams are never replaced automatically. The AI example button appends a fresh six-node cluster and can be undone as one change; capacity failures leave the original graph untouched. Existing real-agent guides receive only node styling refinements. Their stages, branch semantics, locks and honest activity indicators remain unchanged.
 
 ## Boundaries and compatibility
 
@@ -46,4 +58,8 @@ Insertion validates the entire new graph before committing it, so a capacity err
 
 ## Verification
 
+The AI diagram refinement adds four regression cases for cluster append/save, matching attachment ports, slot limits, invalid role changes, separation of main paths and attachments, and atomic example failures. All 18 sandbox tests pass. Attachment-specific desktop/mobile browser verification remains a release check after the refinement.
+
 `tests/workflow-sandbox.test.mjs` covers immutable editing, incident-edge cleanup, existing-v1 round trips, supported and rejected template settings, append versus insert behavior, atomic insertion failure at capacity, independent duplicate settings, bounds and storage preservation. All 14 tests pass. TypeScript and whitespace checks pass. Release browser checks passed for app/action selection, sample settings, search, edge insertion, duplicate/delete/undo, saved graph restoration, and the locked real-agent guide. The picker and canvas were checked at desktop width and 320px phone width. Activity motion is guarded by online + working + not paused, and reduced-motion CSS. No claim of per-step execution is made.
+
+Release follow-up: desktop and320px phone browser checks passed for Prompt → Connect saving, optional customization, the AI example, model deletion/replacement, filtered Tool selection, and the keyboard attachment form. Existing saved canvas nodes survived the update.

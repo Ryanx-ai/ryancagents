@@ -19,11 +19,24 @@
 .canvasWrap { min-width:0; min-height:0; display:flex; flex-direction:column; background:#0d1b242f; }
 .canvas { position:relative; flex:1; min-height:310px; }
 .canvas :global(.react-flow),.canvas :global(.react-flow__background) { background:transparent; }
-.canvas :global(.react-flow__handle) { width:11px; height:11px; border:2px solid #263e4d; background:#b5d1df; }
+.canvas :global(.react-flow__handle) { width:11px!important; height:11px!important; border:2px solid #263e4d!important; background:#b5d1df!important; }
 .canvas :global(.react-flow__handle:hover) { background:#efd4a4; }
 .canvas :global(.react-flow__node:focus-visible) { outline:2px solid #efc88e; outline-offset:5px; border-radius:10px; }
 .canvas :global(.react-flow__controls-button) { padding:0; border-radius:0; min-height:34px; width:34px; }
-.node { width:190px; min-height:106px; padding:14px; border:1px solid #9ebdce68; border-radius:10px; background:#263a46ed; box-shadow:0 7px 15px #02080e26; }
+.node { width:190px; min-height:110px; padding:14px; border:1px solid #9ebdce68; border-radius:11px; background:linear-gradient(145deg,#293e4bed,#203440f5); box-shadow:0 7px 15px #02080e26,inset 0 1px #e3eff509; }
+.triggerNode { border-radius:28px 11px 11px 28px; padding-left:19px; }
+.agentNode { width:270px; height:154px; padding:15px 18px 48px; border-color:#c4a7c16e; background:linear-gradient(140deg,#3d3b4eee,#273944f5); }
+.agentNode .nodeTitle { min-height:45px; gap:13px; }.agentNode .nodeTitle strong { font-size:17px; letter-spacing:-.3px; }
+.agentPorts { position:absolute; bottom:0; left:0; width:100%; height:36px; display:flex; border-top:1px solid #bcb0d133; background:#131e2a20; border-radius:0 0 11px 11px; }
+.agentPorts>div { flex:1; display:flex; justify-content:center; }.playground .agentPorts button { padding:0 3px 6px; border:0; min-height:30px; font-size:9px; gap:3px; color:#cfbddb; border-radius:0; }
+.playground .agentNode .addNext { bottom:47px; }
+.canvas :global(.react-flow__handle).attachmentHandle { border-radius:2px; transform:translate(-50%,50%) rotate(45deg); width:9px!important; height:9px!important; background:#c5b0da!important; border-color:#344252!important; }
+.attachmentNode { width:140px; min-height:130px; display:flex; flex-direction:column; align-items:center; padding:16px 5px 7px; color:#cab8d9; text-align:center; }
+.attachmentNode .attachmentIcon { display:grid; place-items:center; width:66px; height:66px; border:1.5px solid #a891bd8c; background:linear-gradient(135deg,#3b3a4def,#293747fa); box-shadow:0 6px 15px #06101d30; }
+.attachmentNode.model .attachmentIcon { border-radius:50%; }.attachmentNode.memory .attachmentIcon { border-radius:18px/10px; border-top-width:4px; border-bottom-width:4px; }.attachmentNode.tool .attachmentIcon { border-radius:18px 6px 18px 6px; background:linear-gradient(135deg,#35454bef,#283845fa); border-color:#9db9b58c; }
+.attachmentNode.selected .attachmentIcon { border-color:#f0d19f; box-shadow:0 0 0 3px #ecd2a51a; }
+.attachmentNode strong { max-width:130px; font-size:12px; color:#e8e7e1; line-height:1.4; margin-top:10px; overflow-wrap:anywhere; font-weight:500; }.attachmentNode small { margin-top:4px; font-size:9px; color:#a9bac8; }
+.canvas .attachmentNode :global(.react-flow__handle).attachmentHandle { top:4px; transform:translate(-50%,-50%) rotate(45deg); }
 .node.selected { border-color:#ecd2a5; box-shadow:0 0 0 2px #ecd2a51a; }
 .nodeKind { display:flex; align-items:center; gap:6px; font-size:10px; color:#bdd3df; }
 .nodeKind>span { margin-left:auto; font-size:8px; letter-spacing:.04em; color:#a3bac8; }
@@ -35,7 +48,7 @@
 .playground .primaryAdd { color:#f1dfba; border-color:#d5c28c6e; background:#c5a66512; padding-inline:14px; }
 .node strong { display:block; margin:11px 0 7px; font-size:13px; line-height:1.4; font-weight:550; overflow-wrap:anywhere; color:#f0eee8; }
 .node small { color:#a8beca; font-size:10px; }
-.canvasHint { padding:12px 16px; font-size:10px; line-height:1.6; color:#abc0cc; }
+.canvasHint { display:flex; align-items:center; flex-wrap:wrap; gap:7px; padding:12px 16px; font-size:10px; line-height:1.6; color:#abc0cc; }.canvasHint>span:last-child { margin-left:auto; }.mainLegend,.attachmentLegend { width:22px; border-top:2px solid #a6c0cf; }.attachmentLegend { margin-left:10px; border-top:2px dashed #b8a6ce; }
 .empty { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px; color:#b8cdd8; pointer-events:none; }
 .empty strong { font-weight:500; font-size:16px; }.empty p { font-size:12px; }
 .empty button { pointer-events:auto; }
@@ -54,6 +67,7 @@
 .connect { margin-top:25px; padding-top:22px; border-top:1px solid #b9cfda29; }
 .connect h4 { display:flex; align-items:center; gap:7px; font-size:14px; }
 .connect>button { width:100%; }
+.connectNote { display:block; color:#b9c2d4; font-size:10px; line-height:1.6; margin:0 0 12px; }
 .pickHint { padding:7px 0; }.pickHint h4 { margin-top:13px; margin-bottom:10px; }.pickHint p,.edgeEditor p { font-size:12px; line-height:1.7; color:#b7ccd8; }
 .pickHint>button { margin-top:16px; }
 .edgeEditor p { display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:17px; overflow-wrap:anywhere; }

@@ -199,3 +199,34 @@
 .paletteHeader h4 { color: #e6e1d1; font-size: 13px; font-weight: 500; margin: 0; }
 .paletteHeader button { display: inline-flex; align-items: center; gap: 6px; padding: 8px 0; min-height: 32px; color: #ddc28f; font-size: 11px; }
 .paletteHeader button:hover:not(:disabled) { color: #ffe0ac; text-decoration: underline; text-underline-offset: 4px; }
+
+.promptStages { grid-template-columns: 1fr 1fr; gap: 24px; }
+.promptStages button { padding-bottom: 16px; font-size: 13px; }
+.promptReview { position: relative; border-left: 2px solid #b9a06f; padding: 2px 34px 3px 13px; margin: 0 0 24px; }
+.promptReview > span { color: #c4ae84; font-size: 10px; }
+.promptReview p { font-size: 13px; line-height: 1.65; color: #d5dedc; margin: 7px 0 0; white-space: pre-wrap; overflow-wrap: anywhere; max-height: 180px; overflow: auto; scrollbar-width: thin; }
+.promptReview > button { position: absolute; top: -4px; right: 0; min-height: 32px; padding: 5px; color: #e5c58c; font-size: 11px; }
+.promptReview > button:hover { text-decoration: underline; text-underline-offset: 3px; }
+.savedView { display: flex; flex-direction: column; align-items: center; text-align: center; padding: 0 20px 25px; max-width: 520px; margin: 0 auto; }
+.savedPortrait { position: relative; height: 204px; display: grid; place-items: end center; margin: -12px 0 17px; }
+.savedPortrait::before { content: ''; position: absolute; bottom: 7px; width: 94px; height: 12px; border-radius: 50%; background: #07121a77; filter: blur(3px); }
+.savedCheck { position: absolute; bottom: 16px; right: 9px; z-index: 3; width: 30px; height: 30px; display: grid; place-items: center; background: #d6c18f; border: 2px solid #f0ddb2; color: #2b4039; border-radius: 50%; }
+.savedView h3 { font-family: 'Space Grotesk', sans-serif; font-size: 28px; font-weight: 500; letter-spacing: -.7px; color: #f3e6c7; margin: 0; }
+.savedView h3:focus { outline: none; }
+.savedName { color: #c9b894; font-size: 13px; margin: 8px 0 0; overflow-wrap: anywhere; }
+.savedDescription { font-size: 14px; line-height: 1.7; color: #bdcbd0; max-width: 360px; margin: 20px 0 17px; }
+.savedActions { display: flex; align-items: center; gap: 18px; margin-top: 26px; }
+.advanced { border-top: 1px solid #c5d1d527; margin-top: 30px; padding-top: 17px; }
+.advanced > summary { color: #d1dccf; font-size: 13px; padding: 8px 0; cursor: pointer; }
+.advanced > summary > span { color: #94a9b1; font-size: 10px; margin-left: 8px; }
+.advanced > summary:focus-visible { outline: 2px solid #e9c68e; outline-offset: 4px; }
+.advanced > p { color: #a7bbc4; font-size: 12px; line-height: 1.65; margin: 11px 0 22px; }
+@media (max-width: 700px) {
+ .promptStages button { flex-direction: row; align-items: center; font-size: 12px; }
+ .savedView { padding-inline: 0; }
+ .savedPortrait { height: 178px; margin-top: -15px; }
+ .savedPortrait > :global(.ryan-sprite) { transform: scale(.85); transform-origin: 50% 100%; }
+ .savedView h3 { font-size: 25px; }
+ .savedDescription { font-size: 13px; margin-top: 16px; }
+ .savedActions { gap: 14px; margin-top: 21px; }
+}

@@ -30,9 +30,9 @@ function StageNode({data,selected}:NodeProps<Node<StageData>>) {
   {stage.id==='scheduler-output'&&<><Handle id="top" type="target" position={Position.Top} isConnectable={false}/><Handle id="bottom" type="target" position={Position.Bottom} isConnectable={false}/></>}
   {stage.id==='proposal-template'&&<Handle id="refine" type="target" position={Position.Bottom} isConnectable={false}/>}
   {stage.id==='manager-output'&&<Handle id="summary" type="target" position={Position.Top} isConnectable={false}/>}
-  <button type="button" className={`${styles.stage} ${selected?styles.selected:''} nodrag`} onClick={()=>data.inspect(stage.id)} aria-label={`Inspect ${stage.label}`} aria-pressed={selected}>
+  <button type="button" className={`${styles.stage} ${styles[stage.kind]||''} ${selected?styles.selected:''} nodrag`} onClick={()=>data.inspect(stage.id)} aria-label={`Inspect ${stage.label}`} aria-pressed={selected}>
    <span className={styles.stageKind}><Icon size={12}/>{stage.kind==='review'?'Review gate':stage.kind}</span>
-   <span className={styles.stageMain}>{stage.connector?<IntegrationLogo name={stage.connector} size={27} decorative/>:<Icon size={25}/>}<strong>{stage.label}</strong></span>
+   <span className={styles.stageMain}><span className={styles.serviceIcon}>{stage.connector?<IntegrationLogo name={stage.connector} size={27} decorative/>:<Icon size={25}/>}</span><strong>{stage.label}</strong></span>
    <span className={`${styles.capability} ${stage.capability==='planned'?styles.planned:''}`}>{capabilityNames[stage.capability]}</span>
   </button>
   <Handle type="source" position={data.outgoing} isConnectable={false}/>

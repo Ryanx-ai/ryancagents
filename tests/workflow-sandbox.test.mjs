@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {SANDBOX_KEY,MAX_NODES,MAX_EDGES,SANDBOX_TEMPLATES,sandboxTemplate,createSandboxGraph,validateSandboxGraph,readSandboxGraph,saveSandboxGraph,addSandboxNode,addSandboxTemplate,duplicateSandboxNode,updateSandboxNode,removeSandboxNodes,connectSandboxEdge,removeSandboxEdges} from '../lib/workflow-sandbox.mjs';
+import {SANDBOX_KEY,MAX_NODES,MAX_EDGES,SANDBOX_TEMPLATES,sandboxTemplate,sandboxNodeRole,createSandboxGraph,validateSandboxGraph,readSandboxGraph,saveSandboxGraph,addSandboxNode,addSandboxTemplate,addSandboxAgentExample,duplicateSandboxNode,updateSandboxNode,removeSandboxNodes,connectSandboxEdge,removeSandboxEdges} from '../lib/workflow-sandbox.mjs';
 const memory=(initial=null)=>{let raw=initial;return {getItem(key){assert.equal(key,SANDBOX_KEY);return raw;},setItem(key,value){assert.equal(key,SANDBOX_KEY);raw=value;},raw:()=>raw};};
 
 test('sandbox starts as a fresh inert three-step sample',()=>{
@@ -115,4 +115,53 @@ test('oversized serialized example settings cannot replace an existing readable 
  const original=createSandboxGraph(),storage=memory(JSON.stringify(original));let large={version:1,nodes:[],edges:[]};
  for(let i=0;i<MAX_NODES;i++){large=addSandboxTemplate(large,'gmail-draft');large=updateSandboxNode(large,large.nodes.at(-1).id,{data:{config:{recipient:'\u0000'.repeat(1000),subject:'\u0000'.repeat(1000),body:'\u0000'.repeat(1000)}}});}
  assert.throws(()=>saveSandboxGraph(large,storage),/too large to save/);assert.deepEqual(readSandboxGraph(storage).graph,original);
+});
+
+test('AI example adds a main path and three distinct attachments without replacing an existing graph',()=>{
+ const original=createSandboxGraph(),before=JSON.stringify(original),next=addSandboxAgentExample(original);
+ assert.deepEqual(next.nodes.slice(0,3),original.nodes);assert.deepEqual(next.edges.slice(0,2),original.edges);assert.equal(JSON.stringify(original),before);
+ const cluster=next.nodes.slice(3),agent=cluster.find(node=>sandboxNodeRole(node)==='agent');
+ assert.deepEqual(cluster.map(sandboxNodeRole),['main','agent','main','model','memory','tool']);
+ assert.deepEqual(next.edges.filter(edge=>edge.attachment).map(edge=>edge.attachment),['model','memory','tool']);
+ assert.ok(next.edges.filter(edge=>edge.attachment).every(edge=>edge.target===agent.id));
+ const storage=memory();saveSandboxGraph(next,storage);assert.deepEqual(readSandboxGraph(storage).graph,next);
+ assert.equal(next.version,1);assert.doesNotMatch(JSON.stringify(next),/"status"|"credentials"|"execution"|"apiKey"/);
+});
+test('attachment ports enforce matching role, AI Agent target and single model/memory slots',()=>{
+ let graph=addSandboxAgentExample({version:1,nodes:[],edges:[]});const agent=graph.nodes.find(node=>sandboxNodeRole(node)==='agent'),model=graph.nodes.find(node=>sandboxNodeRole(node)==='model'),trigger=graph.nodes[0];
+ graph=removeSandboxEdges(graph,graph.edges.filter(edge=>edge.attachment==='model').map(edge=>edge.id));
+ assert.throws(()=>connectSandboxEdge(graph,model.id,agent.id),/attachment port/);
+ assert.throws(()=>connectSandboxEdge(graph,model.id,agent.id,{attachment:'memory'}),/matching/);
+ assert.throws(()=>connectSandboxEdge(graph,model.id,trigger.id,{attachment:'model'}),/matching/);
+ assert.throws(()=>connectSandboxEdge(graph,trigger.id,agent.id,{attachment:'tool'}),/matching/);
+ graph=connectSandboxEdge(graph,model.id,agent.id,{attachment:'model'});
+ graph=addSandboxTemplate(graph,'ai-chat-model');const another=graph.nodes.at(-1);const before=JSON.stringify(graph);
+ assert.throws(()=>connectSandboxEdge(graph,another.id,agent.id,{attachment:'model'}),/one model/);assert.equal(JSON.stringify(graph),before);
+ const tools=addSandboxTemplate(graph,'calendar-tool',{attachId:agent.id});assert.equal(tools.edges.filter(edge=>edge.attachment==='tool').length,2);
+ assert.throws(()=>addSandboxTemplate(graph,'ai-memory',{attachId:agent.id}),/one model/);
+});
+test('attachment branches cannot become sequential paths or be split by a primary action',()=>{
+ const graph=addSandboxAgentExample({version:1,nodes:[],edges:[]}),before=JSON.stringify(graph),edge=graph.edges.find(edge=>edge.attachment==='model'),model=graph.nodes.find(node=>node.id===edge.source);
+ assert.throws(()=>addSandboxTemplate(graph,'gmail-draft',{edgeId:edge.id}),/main path/);
+ assert.throws(()=>addSandboxTemplate(graph,'gmail-draft',{afterId:model.id}),/attachment port/);
+ assert.throws(()=>addSandboxTemplate(graph,'ai-memory',{edgeId:graph.edges[0].id}),/attachment port/);
+ assert.throws(()=>updateSandboxNode(graph,model.id,{data:{templateId:'ai-memory'}}),/matching/);
+ assert.equal(JSON.stringify(graph),before);
+ const deleted=removeSandboxNodes(graph,[edge.target]);assert.equal(deleted.edges.length,0);assert.equal(deleted.nodes.length,5);
+});
+
+test('new tools fan across the attachment row without moving existing user positions',()=>{
+ let original=addSandboxAgentExample({version:1,nodes:[],edges:[]});const agent=original.nodes.find(node=>sandboxNodeRole(node)==='agent'),firstTool=original.nodes.find(node=>sandboxNodeRole(node)==='tool');
+ original=updateSandboxNode(original,firstTool.id,{position:{x:123,y:456}});const before=JSON.stringify(original);
+ const second=addSandboxTemplate(original,'calendar-tool',{attachId:agent.id}),third=addSandboxTemplate(second,'sheets-tool',{attachId:agent.id});
+ assert.deepEqual(second.nodes.at(-1).position,{x:agent.position.x+290+190,y:agent.position.y+240});
+ assert.deepEqual(third.nodes.at(-1).position,{x:agent.position.x+290+380,y:agent.position.y+240});
+ assert.deepEqual(third.nodes.slice(0,original.nodes.length),original.nodes);assert.equal(JSON.stringify(original),before);
+ const explicit=addSandboxTemplate(third,'ai-tool',{attachId:agent.id,position:{x:900,y:600}});assert.deepEqual(explicit.nodes.at(-1).position,{x:900,y:600});
+});
+test('AI example capacity errors are atomic and unsupported attachment data never overwrites saved graphs',()=>{
+ let graph=createSandboxGraph();while(graph.nodes.length<37)graph=addSandboxNode(graph);
+ const before=JSON.stringify(graph);assert.throws(()=>addSandboxAgentExample(graph),/40 nodes/);assert.equal(JSON.stringify(graph),before);
+ const invalid=addSandboxAgentExample({version:1,nodes:[],edges:[]});invalid.edges[0].attachment='credentials';
+ const storage=memory(JSON.stringify(invalid));assert.ok(readSandboxGraph(storage).error);assert.throws(()=>saveSandboxGraph(createSandboxGraph(),storage));assert.equal(storage.raw(),JSON.stringify(invalid));
 });
