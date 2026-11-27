@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {SANDBOX_KEY,MAX_NODES,MAX_EDGES,createSandboxGraph,validateSandboxGraph,readSandboxGraph,saveSandboxGraph,addSandboxNode,updateSandboxNode,removeSandboxNodes,connectSandboxEdge,removeSandboxEdges} from '../lib/workflow-sandbox.mjs';
+import {SANDBOX_KEY,MAX_NODES,MAX_EDGES,SANDBOX_TEMPLATES,sandboxTemplate,createSandboxGraph,validateSandboxGraph,readSandboxGraph,saveSandboxGraph,addSandboxNode,addSandboxTemplate,duplicateSandboxNode,updateSandboxNode,removeSandboxNodes,connectSandboxEdge,removeSandboxEdges} from '../lib/workflow-sandbox.mjs';
 const memory=(initial=null)=>{let raw=initial;return {getItem(key){assert.equal(key,SANDBOX_KEY);return raw;},setItem(key,value){assert.equal(key,SANDBOX_KEY);raw=value;},raw:()=>raw};};
 
 test('sandbox starts as a fresh inert three-step sample',()=>{
@@ -64,4 +64,55 @@ test('storage access and quota errors fail visibly without claiming a save',()=>
  assert.ok(readSandboxGraph(denied).error);assert.throws(()=>saveSandboxGraph(createSandboxGraph(),denied));
  const full={getItem(){return old;},setItem(){throw Error('Quota');}};
  assert.throws(()=>saveSandboxGraph(createSandboxGraph(),full),/could not be saved/);assert.equal(full.getItem(),old);
+});
+
+test('existing version-one custom canvas round trips without replacing labels, positions or notes',()=>{
+ const old=createSandboxGraph();old.nodes[1].data={label:'My old custom action',kind:'output',notes:'Keep my plans'};old.nodes[1].position={x:-123,y:456};
+ const raw=JSON.stringify(old),storage=memory(raw),restored=readSandboxGraph(storage);
+ assert.deepEqual(restored,{graph:old,error:null});saveSandboxGraph(restored.graph,storage);assert.equal(storage.raw(),raw);
+ const expanded=addSandboxTemplate(restored.graph,'gmail-draft');assert.deepEqual(expanded.nodes.slice(0,3),old.nodes);assert.deepEqual(expanded.edges,old.edges);
+});
+test('app templates persist only supported bounded example settings',()=>{
+ let graph=addSandboxTemplate(createSandboxGraph(),'gmail-draft');const id=graph.nodes.at(-1).id;
+ graph=updateSandboxNode(graph,id,{data:{config:{recipient:'example@example.com',subject:'Practice',body:'Only a local sketch'},run:true}});
+ const storage=memory();saveSandboxGraph(graph,storage);assert.deepEqual(readSandboxGraph(storage).graph,graph);
+ assert.equal(graph.nodes.at(-1).data.templateId,'gmail-draft');assert.doesNotMatch(storage.raw(),/"run"|credentials|execute/);
+ for(const patch of [{templateId:'unknown'},{config:{apiKey:'not-supported'}},{config:{subject:'x'.repeat(1001)}},{config:{subject:5}}])assert.throws(()=>updateSandboxNode(graph,id,{data:patch}));
+ assert.throws(()=>updateSandboxNode(createSandboxGraph(),'sandbox-start',{data:{config:{body:'Invalid'}}}));
+ assert.equal(new Set(SANDBOX_TEMPLATES.map(template=>template.id)).size,SANDBOX_TEMPLATES.length);
+ assert.equal(sandboxTemplate('missing'),null);
+});
+test('add-next makes a new branch without disconnecting an existing successor',()=>{
+ const original=createSandboxGraph(),before=JSON.stringify(original);
+ const next=addSandboxTemplate(original,'review',{afterId:'sandbox-action'}),added=next.nodes.at(-1);
+ assert.deepEqual(next.edges.slice(0,original.edges.length),original.edges);
+ assert.equal(next.edges.at(-1).source,'sandbox-action');assert.equal(next.edges.at(-1).target,added.id);
+ assert.equal(added.data.templateId,'review');assert.ok(added.position.y>original.nodes[1].position.y);
+ assert.equal(JSON.stringify(original),before);
+});
+test('insert replaces exactly one connection as an immutable all-or-nothing change',()=>{
+ const original=connectSandboxEdge(createSandboxGraph(),'sandbox-start','sandbox-review'),before=JSON.stringify(original);
+ const replaced=original.edges[0],next=addSandboxTemplate(original,'condition',{edgeId:replaced.id}),added=next.nodes.at(-1);
+ assert.equal(next.edges.length,original.edges.length+1);assert.ok(!next.edges.some(edge=>edge.id===replaced.id));
+ for(const edge of original.edges.slice(1))assert.deepEqual(next.edges.find(item=>item.id===edge.id),edge);
+ assert.ok(next.edges.some(edge=>edge.source===replaced.source&&edge.target===added.id));
+ assert.ok(next.edges.some(edge=>edge.source===added.id&&edge.target===replaced.target));
+ assert.equal(JSON.stringify(original),before);
+ assert.throws(()=>addSandboxTemplate(original,'condition',{edgeId:'gone'}));
+ assert.throws(()=>addSandboxTemplate(original,'condition',{edgeId:replaced.id,afterId:'sandbox-start'}));
+ let full={version:1,nodes:[],edges:[]};for(let i=0;i<10;i++)full=addSandboxNode(full,{label:`Step ${i}`});
+ for(const source of full.nodes)for(const target of full.nodes)if(source.id!==target.id&&full.edges.length<MAX_EDGES)full=connectSandboxEdge(full,source.id,target.id);
+ const fullBefore=JSON.stringify(full);assert.throws(()=>addSandboxTemplate(full,'review',{edgeId:full.edges[0].id}),/80 connections/);assert.equal(JSON.stringify(full),fullBefore);
+});
+test('duplicate copies local settings with fresh identity but no copied links or shared nested state',()=>{
+ let original=addSandboxTemplate(createSandboxGraph(),'gmail-draft',{afterId:'sandbox-review'});const source=original.nodes.at(-1);
+ original=updateSandboxNode(original,source.id,{data:{config:{subject:'Original'},notes:'Keep me'}});
+ const next=duplicateSandboxNode(original,source.id),copy=next.nodes.at(-1);
+ assert.notEqual(copy.id,source.id);assert.equal(copy.data.label,'Draft email copy');assert.equal(copy.data.notes,'Keep me');assert.deepEqual(next.edges,original.edges);
+ copy.data.config.subject='Changed';assert.equal(original.nodes.at(-1).data.config.subject,'Original');
+});
+test('oversized serialized example settings cannot replace an existing readable save',()=>{
+ const original=createSandboxGraph(),storage=memory(JSON.stringify(original));let large={version:1,nodes:[],edges:[]};
+ for(let i=0;i<MAX_NODES;i++){large=addSandboxTemplate(large,'gmail-draft');large=updateSandboxNode(large,large.nodes.at(-1).id,{data:{config:{recipient:'\u0000'.repeat(1000),subject:'\u0000'.repeat(1000),body:'\u0000'.repeat(1000)}}});}
+ assert.throws(()=>saveSandboxGraph(large,storage),/too large to save/);assert.deepEqual(readSandboxGraph(storage).graph,original);
 });

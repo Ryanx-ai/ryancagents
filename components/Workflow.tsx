@@ -3,7 +3,7 @@
 import {useEffect,useMemo,useRef,useState,type CSSProperties} from 'react';
 import dynamic from 'next/dynamic';
 import {ReactFlow,Background,Controls,Handle,Position,MarkerType,type Node,type NodeProps,type Edge} from '@xyflow/react';
-import {ArrowLeft,ArrowUpRight,GitBranch,History,Info,MessageSquare,Plus,ShieldCheck,Waypoints,Zap} from 'lucide-react';
+import {ArrowLeft,ArrowUpRight,GitBranch,History,Info,MessageSquare,Plus,LockKeyhole,ShieldCheck,Waypoints,Zap} from 'lucide-react';
 import '@xyflow/react/dist/style.css';
 import {agents,type AgentId,type AgentState,type Activity} from '../lib/model';
 import {workflowCatalog,type WorkflowStage} from '../lib/workflow-catalog';
@@ -12,7 +12,7 @@ import MessageContent from './MessageContent';
 import {Ryan} from './Office';
 import styles from './Workflow.module.css';
 
-const PlanningMap=dynamic(()=>import('./PlanningMap'),{loading:()=> <p className={styles.loading}>Opening sketchbook…</p>});
+const PlanningMap=dynamic(()=>import('./PlanningMap'),{loading:()=> <p className={styles.loading}>Opening saved map…</p>});
 const SandboxWorkflow=dynamic(()=>import('./SandboxWorkflow'),{loading:()=> <p className={styles.loading}>Opening sandbox…</p>,ssr:false});
 type Receipt={id:string;agentId:AgentId;status:string;createdAt:string;pickedUpAt?:string;queuedAt?:string;deliveredAt?:string;repliedAt?:string};
 type Props={states:AgentState[];events?:Activity[];messages?:Receipt[];online?:boolean;demo?:boolean;paused?:boolean;onSelect:(id:AgentId)=>void;onCreate?:()=>void};
@@ -50,7 +50,7 @@ export default function Workflow(props:Props) {
  const [selection,setSelection]=useState<AgentId|'sandbox'>('scheduler');
  const [sketchbook,setSketchbook]=useState(false);
  const accent=selection==='sandbox'?'#b6c7d1':agents.find(a=>a.id===selection)!.color;
- if(sketchbook)return <section className={styles.sketchbook}><div className={styles.sketchHeader}><button onClick={()=>setSketchbook(false)}><ArrowLeft size={16}/>Agent workflows</button><span>Sketchbook · saved planning map</span></div><PlanningMap states={props.states} onSelect={props.onSelect}/></section>;
+ if(sketchbook)return <section className={styles.sketchbook}><div className={styles.sketchHeader}><button onClick={()=>setSketchbook(false)}><ArrowLeft size={16}/>Agent workflows</button><span>Saved map · read only</span></div><PlanningMap states={props.states} onSelect={props.onSelect} online={props.online} paused={props.paused} onSandbox={()=>{setSketchbook(false);setSelection('sandbox');}}/></section>;
  return <section className={styles.workspace} aria-label="Agent workflows" style={{'--flow-accent':accent} as CSSProperties}>
   <nav className={styles.roster} aria-label="Workflow agents">
    <div className={styles.rosterTitle}><GitBranch size={16}/><span>Your agency</span></div>
@@ -58,7 +58,7 @@ export default function Workflow(props:Props) {
     const status=props.online?props.states.find(s=>s.id===a.id)?.status||'offline':'offline';
     return <button key={a.id} className={`${styles.agent} ${a.id===selection?styles.activeAgent:''}`} onClick={()=>setSelection(a.id)} aria-pressed={a.id===selection} style={{'--flow-accent':a.color} as CSSProperties}><span className={styles.avatar}><Ryan agentId={a.id} size={42} still/></span><span><strong>{a.name.replace(' Ryan','')}</strong><small>{stateNames[status]}</small></span><i className={styles[status]} aria-hidden="true"/></button>;
    })}<button className={`${styles.agent} ${styles.sandboxAgent} ${selection==='sandbox'?styles.activeAgent:''}`} onClick={()=>setSelection('sandbox')} aria-pressed={selection==='sandbox'} aria-label="Dummy Ryan · Play sandbox"><span className={`${styles.avatar} ${styles.silhouette}`}><Ryan size={42} still/></span><span><strong>Dummy Ryan</strong><small>Play sandbox</small></span></button></div>
-   <div className={styles.rosterActions}>{props.onCreate&&<button className={styles.create} onClick={props.onCreate}><Plus size={16}/>Add agent</button>}<button onClick={()=>setSketchbook(true)}><GitBranch size={14}/>Sketchbook</button></div>
+   <div className={styles.rosterActions}>{props.onCreate&&<button className={styles.create} onClick={props.onCreate}><Plus size={16}/>Add agent</button>}<button onClick={()=>setSketchbook(true)}><LockKeyhole size={14}/>Saved map</button></div>
   </nav>
   {selection==='sandbox'?<SandboxWorkflow/>:<AgentWorkflow key={selection} {...props} agentId={selection}/>}
  </section>;
@@ -84,7 +84,7 @@ function AgentWorkflow({agentId,states,events=[],messages=[],online=false,demo=f
    const row=Math.floor(i/3),reverse=row%2===1,col=reverse?2-i%3:i%3;
    const incoming=i>0&&i%3===0?Position.Top:reverse?Position.Right:Position.Left;
    const outgoing=i%3===2?Position.Bottom:reverse?Position.Left:Position.Right;
-   return {id:s.id,type:'stage',initialWidth:206,initialHeight:126,position:{x:col*306,y:row*190},data:{stage:s,color:agent.color,incoming,outgoing,inspect},selected:s.id===stage.id,draggable:false};
+   return {id:s.id,type:'stage',initialWidth:206,initialHeight:126,position:{x:col*306,y:row*190},data:{stage:s,color:agent.color,incoming,outgoing,inspect},selected:s.id===stage.id,draggable:false,connectable:false,deletable:false};
   });
   let routes=definition.stages.slice(1).map((s,i)=>({source:definition.stages[i].id,target:s.id,label:''}));
   if(agentId==='scheduler') {
@@ -102,7 +102,7 @@ function AgentWorkflow({agentId,states,events=[],messages=[],online=false,demo=f
    ...(r.source==='scheduler-attention'&&r.target==='scheduler-output'?{targetHandle:'bottom'}:{}),
    ...(r.source==='proposal-review'&&r.target==='proposal-template'?{sourceHandle:'refine',targetHandle:'refine'}:{}),
    ...(r.source==='manager-context'&&r.target==='manager-output'?{sourceHandle:'summary',targetHandle:'summary'}:{}),
-   id:`${r.source}-${r.target}`,type:'smoothstep',animated:moving,className:`${styles.activityEdge} ${moving?styles.flowing:''}`,markerEnd:{type:MarkerType.ArrowClosed,color:agent.color,width:14,height:14},style:{stroke:agent.color,strokeWidth:2,opacity:moving?.95:.55},labelStyle:{fill:'#d4e0e7',fontSize:10},labelBgStyle:{fill:'#20313d',fillOpacity:.95},labelBgPadding:[6,4],labelBgBorderRadius:4}));
+   id:`${r.source}-${r.target}`,type:'smoothstep',reconnectable:false,deletable:false,animated:moving,className:`${styles.activityEdge} ${moving?styles.flowing:''}`,markerEnd:{type:MarkerType.ArrowClosed,color:agent.color,width:14,height:14},style:{stroke:agent.color,strokeWidth:2,opacity:moving?.95:.55},labelStyle:{fill:'#d4e0e7',fontSize:10},labelBgStyle:{fill:'#20313d',fillOpacity:.95},labelBgPadding:[6,4],labelBgBorderRadius:4}));
   return {nodes,edges};
  },[definition,agent.color,stage.id,agentId,moving]);
  return <div className={styles.content}>
@@ -110,7 +110,7 @@ function AgentWorkflow({agentId,states,events=[],messages=[],online=false,demo=f
    <div className={styles.runtime}><span className={`${styles.status} ${styles[status]}`}>{demo?'Demo · ':''}{stateNames[status]}</span><span className={styles.progress}>{online&&status==='working'?(state?.progress||state?.activity||'Working in Codex'):online&&status==='error'?'Check the original chat for the error.':online&&status==='waiting'?'Check the latest context in chat.':status==='offline'?'Agent activity unavailable':online?'Ready for the next task':'Live activity unavailable'}</span><span className={styles.observed}>{time(state?.updatedAt)}</span></div>
    <div className={styles.workArea}>
     <div className={styles.graphArea}>
-     <div className={styles.graphLabel}><span>Workflow guide</span><span>{definition.stages.length} steps</span></div>
+     <div className={styles.graphLabel}><span><LockKeyhole size={11}/>Read-only workflow</span><span>{definition.stages.length} steps</span></div>
      <div className={styles.mobileSteps} aria-label="Workflow steps">{routeHints[agentId]&&<p className={styles.routeHint}>{routeHints[agentId]}</p>}{definition.stages.map((item,i)=><button key={item.id} aria-pressed={stage.id===item.id} onClick={()=>{setSelectedStage(item.id);setTab('step');inspectorRef.current?.scrollIntoView({block:'start'});}}><span>{i+1}</span>{item.connector&&<IntegrationLogo name={item.connector} size={21} decorative/>}<strong>{item.label}</strong><small>{item.kind==='review'?'Review gate':capabilityNames[item.capability]}</small><ArrowUpRight size={13}/></button>)}</div>
      <div className={styles.canvas}>{wide&&<ReactFlow key={agentId} nodes={nodes} edges={edges} nodeTypes={nodeTypes} nodesDraggable={false} nodesConnectable={false} edgesFocusable={false} deleteKeyCode={null} fitView fitViewOptions={{padding:'5%',maxZoom:1}} minZoom={.35} maxZoom={1.5} zoomOnDoubleClick={false} onNodeClick={(_,node)=>{setSelectedStage(node.id);setTab('step');}}><Background gap={22} size={1} color="#52616c"/><Controls showInteractive={false}/></ReactFlow>}</div>
      <p className={styles.graphNote}><Info size={13}/>Moving dots mean this agent is working. Individual steps are not tracked.{paused?' Animation paused.':''}</p>

@@ -1,10 +1,11 @@
 'use client';
 import {useEffect,useState,useCallback,useRef} from 'react';
 import dynamic from 'next/dynamic';
-import {Activity,GitBranch,SlidersHorizontal,Sun,Moon,Pause,Play,LockKeyhole,X,Send,Check,ArrowUpRight,BarChart3,Radio,Maximize,Minimize,Gamepad2,RefreshCw,Search,LogOut,Info,Plus} from 'lucide-react';
+import {Activity,GitBranch,SlidersHorizontal,Sun,Moon,Pause,Play,LockKeyhole,X,Send,Check,ArrowUpRight,BarChart3,Radio,Maximize,Minimize,Gamepad2,RefreshCw,Search,LogOut,Info,Plus,ClipboardList} from 'lucide-react';
 import Office,{Ryan} from './Office';
 import CharacterCard from './CharacterCard';
 import {WardrobeProvider} from './WardrobeProvider';
+import {useBlackboard} from './useBlackboard';
 import profileStyles from './DashboardProfiles.module.css';
 import MessageContent from './MessageContent';
 import IntegrationLogo,{integrationMeta} from './IntegrationLogo';
@@ -16,6 +17,7 @@ import {agents,emptyAgents,type AgentId,type AgentState,type Snapshot} from '../
 import {avatarMode,needsReview,mergeReviews} from '../lib/game-state.mjs';
 const AgentCreator=dynamic(()=>import('./AgentCreator'),{ssr:false});
 const Wardrobe=dynamic(()=>import('./Wardrobe'),{ssr:false});
+const Blackboard=dynamic(()=>import('./Blackboard'),{ssr:false});
 const Workflow=dynamic(()=>import('./Workflow'),{loading:()=> <div className="panel-loading"><RefreshCw className="spin" size={22}/></div>});
 const statusNames:Record<string,string>={planning:'Planning',pending:'Queued for Mac',queued:'Queued in Codex',delivered:'Delivered',replied:'Replied',uncertain:'Check Codex before retrying',failed:'Failed',expired:'Expired'};
 type Message={id:string;agentId:AgentId;prompt:string;status:string;reply?:string;createdAt:string};
@@ -48,6 +50,7 @@ function OfficeDashboard(){
  const [profile,setProfile]=useState<AgentId|null>(null);
  const [wardrobe,setWardrobe]=useState<AgentId|null>(null);
  const [creatingAgent,setCreatingAgent]=useState(false);
+ const [boardOpen,setBoardOpen]=useState(false);
  const [panel,setPanel]=useState<Panel>(null);
  const [night,setNight]=useState(true);
  const [paused,setPaused]=useState(false);
@@ -79,9 +82,9 @@ function OfficeDashboard(){
  const [fullscreen,setFullscreen]=useState(false);
  const messageRequest=useRef<{id:string;agentId:AgentId;prompt:string}|null>(null);
  const chatRef=useRef<HTMLElement>(null);
- const lockOffice=useCallback(()=>{authEpoch.current++;tokenRef.current=null;etags.current.clear();refreshFailures.current=0;messageFailures.current=0;setServiceError('');setSending(false);setUnlocking(false);setSessionToken(null);setConnection('locked');setSnapshot(null);setMessages([]);setReviewed({});setCompleted({});setDemoCompleted({});setReviewing({});setDrafts({});setSelected(null);setProfile(null);setWardrobe(null);setCreatingAgent(false);setPanel(null);setDemo(false);setAccessKey('');setPersonalKey('');messageRequest.current=null;},[]);
+ const lockOffice=useCallback(()=>{authEpoch.current++;tokenRef.current=null;etags.current.clear();refreshFailures.current=0;messageFailures.current=0;setServiceError('');setSending(false);setUnlocking(false);setSessionToken(null);setConnection('locked');setSnapshot(null);setMessages([]);setReviewed({});setCompleted({});setDemoCompleted({});setReviewing({});setDrafts({});setSelected(null);setProfile(null);setWardrobe(null);setCreatingAgent(false);setBoardOpen(false);setPanel(null);setDemo(false);setAccessKey('');setPersonalKey('');messageRequest.current=null;},[]);
  useEffect(()=>{
-  if(!selected||unlock||profile||wardrobe||creatingAgent)return;
+  if(!selected||unlock||profile||wardrobe||creatingAgent||boardOpen)return;
   const dismiss=(event:PointerEvent)=>{
    if(event.button!==0||!event.isPrimary||!(event.target instanceof Element))return;
    if(chatRef.current?.contains(event.target)||document.querySelector('dialog[open]'))return;
@@ -92,7 +95,7 @@ function OfficeDashboard(){
   };
   document.addEventListener('pointerdown',dismiss,true);
   return()=>document.removeEventListener('pointerdown',dismiss,true);
- },[selected,unlock,profile,wardrobe,creatingAgent]);
+ },[selected,unlock,profile,wardrobe,creatingAgent,boardOpen]);
  const request=useCallback(async(url:string,init:RequestInit={})=>{
   const token=tokenRef.current;if(!token)throw new Error('Unlock the office first.');
   const isRead=!init.method||init.method==='GET';const cached=isRead?etags.current.get(url):null;
@@ -101,6 +104,10 @@ function OfficeDashboard(){
   if(r.status===401){lockOffice();throw new Error('Unlock the office again.');}
   return r;
  },[lockOffice]);
+ const boardDay=now?new Date(now+8*60*60*1000).toISOString().slice(0,10):'';
+ const board=useBlackboard(demo?null:sessionToken,boardDay,request);
+ const todayNotes=(board.data?.notes||[]).filter(note=>note.date===boardDay).sort((a,b)=>Number(a.done)-Number(b.done));
+ function openBoard(){setSelected(null);setPanel(null);setBoardOpen(true);void board.refresh(false);}
  const refresh=useCallback(async()=>{
   const token=tokenRef.current;if(!token)return 10000;const sequence=++refreshSequence.current;
   let retryAfter:string|null=null;
@@ -174,10 +181,10 @@ function OfficeDashboard(){
  }
  async function toggleFullscreen(){try{if(document.fullscreenElement)await document.exitFullscreen();else await document.documentElement.requestFullscreen();}catch{setError('Fullscreen is unavailable in this browser.');}}
  return <div className={`game-shell ${unlock?'office-locked':''}`}><div className="office-stage" inert={unlock} aria-hidden={unlock?true:undefined}>
-  <Office states={states} selected={selected} onSelect={choose} onProfile={setProfile} night={night} onNightChange={setNight} paused={paused||unlock||!!profile||!!wardrobe||creatingAgent} reviewed={reviews} online={online}/>
+  <Office states={states} selected={selected} onSelect={choose} onProfile={setProfile} night={night} onNightChange={setNight} paused={paused||unlock||!!profile||!!wardrobe||creatingAgent||boardOpen} reviewed={reviews} online={online} boardNotes={todayNotes} onBoard={openBoard}/>
   <div className="hud-top-left"><button className="hq-badge" onClick={()=>{setSelected(null);setPanel(null);}} aria-label="Office"><span>r.</span><strong>HQ</strong></button>{demo&&<button className="demo-badge" onClick={()=>setDemo(false)}>Demo <X size={12}/></button>}</div>
   <div className="hud-top-right"><button className={`signal-badge ${online?'connected':''}`} title={connection==='locked'?'Unlock office':online?'Bridge connected':serviceError||'Bridge offline'} onClick={()=>openPanel('settings')}><i/>{connection==='locked'&&!demo?<LockKeyhole size={13}/>:<Radio size={14}/>}</button><span className="hud-button" role="img" aria-label={night?'Nighttime, Singapore time':'Daytime, Singapore time'} title={night?'Night · 7pm–7am SGT':'Day · 7am–7pm SGT'}>{night?<Moon size={18}/>:<Sun size={18}/>}</span><Button label={fullscreen?'Exit fullscreen':'Fullscreen'} onClick={()=>void toggleFullscreen()}>{fullscreen?<Minimize size={17}/>:<Maximize size={17}/>}</Button></div>
-  <div className={`hud-bottom ${profileStyles.loadout}`}><div className="agent-switcher">{agents.map(a=>{const s=states.find(s=>s.id===a.id)!;const m=avatarMode(s,reviews,online);return <button key={a.id} title={a.name} aria-label={`Select ${a.name}`} className={`avatar-shortcut ${selected===a.id?'active':''}`} onClick={()=>choose(a.id)} style={{'--agent-color':a.color} as React.CSSProperties}><Ryan size={54} still agentId={a.id}/><span className="shortcut-status">{m==='attention'?'!':needsReview(s,reviews)?'★':m==='working'?'•':''}</span></button>;})}<button type="button" className={`avatar-shortcut ${profileStyles.addAgent}`} aria-label="Create agent" title="Create agent" onClick={()=>setCreatingAgent(true)}><Plus size={21} strokeWidth={1.5} aria-hidden="true"/></button></div><div className="hud-dock"><Button label="Activity" active={panel==='activity'} badge={attention+celebrations} onClick={()=>openPanel('activity')}><Activity size={19}/></Button><Button label="Workflows" active={panel==='workflow'} onClick={()=>openPanel('workflow')}><GitBranch size={19}/></Button><Button label="Stats" badge={toReview} active={panel==='stats'} onClick={()=>openPanel('stats')}><BarChart3 size={19}/></Button><span className="dock-divider"/><Button label={paused?'Resume animations':'Pause animations'} active={paused} onClick={()=>setPaused(v=>!v)}>{paused?<Play size={17}/>:<Pause size={17}/>}</Button><Button label="Settings" active={panel==='settings'} onClick={()=>openPanel('settings')}><SlidersHorizontal size={19}/></Button></div></div>
+  <div className={`hud-bottom ${profileStyles.loadout}`}><div className="agent-switcher">{agents.map(a=>{const s=states.find(s=>s.id===a.id)!;const m=avatarMode(s,reviews,online);return <button key={a.id} title={a.name} aria-label={`Select ${a.name}`} className={`avatar-shortcut ${selected===a.id?'active':''}`} onClick={()=>choose(a.id)} style={{'--agent-color':a.color} as React.CSSProperties}><Ryan size={54} still agentId={a.id}/><span className="shortcut-status">{m==='attention'?'!':needsReview(s,reviews)?'★':m==='working'?'•':''}</span></button>;})}<button type="button" className={`avatar-shortcut ${profileStyles.addAgent}`} aria-label="Create agent" title="Create agent" onClick={()=>setCreatingAgent(true)}><Plus size={21} strokeWidth={1.5} aria-hidden="true"/></button></div><div className="hud-dock"><Button label="Activity" active={panel==='activity'} badge={attention+celebrations} onClick={()=>openPanel('activity')}><Activity size={19}/></Button><Button label="Workflows" active={panel==='workflow'} onClick={()=>openPanel('workflow')}><GitBranch size={19}/></Button><Button label="Stats" badge={toReview} active={panel==='stats'} onClick={()=>openPanel('stats')}><BarChart3 size={19}/></Button><Button label="Blackboard" active={boardOpen} onClick={openBoard}><ClipboardList size={19}/></Button><span className="dock-divider"/><Button label={paused?'Resume animations':'Pause animations'} active={paused} onClick={()=>setPaused(v=>!v)}>{paused?<Play size={17}/>:<Pause size={17}/>}</Button><Button label="Settings" active={panel==='settings'} onClick={()=>openPanel('settings')}><SlidersHorizontal size={19}/></Button></div></div>
   {chosen&&state&&<section ref={chatRef} className="floating-panel chat-panel" role="dialog" aria-label={`Chat with ${chosen.name}`}>
    <header className="panel-header"><div className="chat-avatar" style={{'--agent-color':chosen.color} as React.CSSProperties}><Ryan size={54} still agentId={chosen.id}/></div><div><div className={profileStyles.nameRow}><h2>{chosen.name}</h2><button type="button" className={profileStyles.infoButton} onClick={()=>setProfile(chosen.id)} aria-label={`View ${chosen.name} profile`} title="Character profile" aria-haspopup="dialog"><Info size={15} aria-hidden="true"/></button></div><span className={`compact-status ${mode}`}>{!online||mode==='offline'?'Offline':mode==='review'?'Ready for review':mode==='attention'?'Needs attention':mode==='working'?'Working':'Idle'}</span></div>{chosen.thread&&<a className="hud-button" href={`codex://threads/${chosen.thread}`} aria-label="Open original Codex chat" title="Open in Codex"><ArrowUpRight size={17}/></a>}<button className="hud-button" onClick={()=>setSelected(null)} aria-label="Close chat"><X size={18}/></button></header>
    {chosen.id==='proposal'&&<a className={profileStyles.studioLink} href={integrationMeta.studio.href} target="_blank" rel="noopener noreferrer" title="Open Proposal Studio on this Mac"><IntegrationLogo name="studio" size={23} decorative/><span>Open Studio</span><ArrowUpRight size={18} aria-hidden="true"/></a>}
@@ -191,13 +198,14 @@ function OfficeDashboard(){
    <form className="prompt-composer" onSubmit={send}><textarea aria-label={`Message ${chosen.name}`} placeholder={chosen.id==='manager'?'Summarize, plan, or delegate…':`Message ${chosen.name}…`} value={drafts[chosen.id]||''} maxLength={4000} onChange={e=>setDrafts(v=>({...v,[chosen.id]:e.target.value}))} onKeyDown={e=>{if(e.key==='Enter'&&(e.metaKey||e.ctrlKey)){e.preventDefault();e.currentTarget.form?.requestSubmit();}}}/><div className="composer-bottom">{chosen.thread?<a href={`codex://threads/${chosen.thread}`}><span className="codex-symbol">✳</span>Codex<ArrowUpRight size={11}/></a>:<span><span className="codex-symbol">✳</span>Manager · Codex</span>}<button className="send-button" type="submit" disabled={sending||!drafts[chosen.id]?.trim()} aria-label="Send to Codex">{sending?<RefreshCw className="spin" size={16}/>:<Send size={17}/>}</button></div></form>
   </section>}
   {panel&&<section className={`floating-panel utility-panel ${panel==='workflow'?`wide-panel ${profileStyles.workflowWindow}`:panel==='stats'?'review-panel':''}`} role="dialog" aria-label={panel}><header className="panel-header"><h2>{panel==='activity'?'Activity':panel==='workflow'?'Workflows':panel==='stats'?'Reviews & shortcuts':'Settings'}</h2><button className="hud-button" aria-label="Close panel" onClick={()=>setPanel(null)}><X size={18}/></button></header>
-   {panel==='workflow'&&<Workflow states={states} events={eventList} messages={messages} online={online} demo={demo} paused={paused||unlock||!!profile||!!wardrobe||creatingAgent} onSelect={choose} onCreate={()=>setCreatingAgent(true)}/>}
+   {panel==='workflow'&&<Workflow states={states} events={eventList} messages={messages} online={online} demo={demo} paused={paused||unlock||!!profile||!!wardrobe||creatingAgent||boardOpen} onSelect={choose} onCreate={()=>setCreatingAgent(true)}/>}
    {panel==='activity'&&<><div className="activity-filters"><label><Search size={15}/><input aria-label="Search activity" placeholder="Search" value={query} onChange={e=>setQuery(e.target.value)}/></label><select aria-label="Filter agent" value={filter} onChange={e=>setFilter(e.target.value)}><option value="all">All</option>{agents.map(a=><option key={a.id} value={a.id}>{a.name}</option>)}</select></div><div className="scroll-panel">{eventList.filter(e=>(filter==='all'||e.agentId===filter)&&e.label.toLowerCase().includes(query.toLowerCase())).map(e=><button className="event-row" key={e.id} onClick={()=>choose(e.agentId)}><i style={{background:agents.find(a=>a.id===e.agentId)?.color}}/><div><strong>{e.label}</strong><span>{agents.find(a=>a.id===e.agentId)?.name}</span></div><time>{relative(e.at,now)}</time></button>)}{!eventList.length&&<div className="empty-state">No activity</div>}</div></>}
    {panel==='stats'&&<ReviewSheet states={states} events={eventList} reviewed={reviews} completed={completions} online={online} pending={reviewing} onDone={(id,at)=>void review(id,at)} onSelect={choose} onPanel={openPanel}/>}
    {panel==='settings'&&<div className="settings-panel">{serviceError&&<p className="inline-error" role="status">{serviceError}</p>}<a className="setting-row" href="https://vercel.com/pangea6/~/settings/billing" target="_blank" rel="noopener noreferrer"><span>Usage alert</span><b>US$10 <ArrowUpRight size={12}/></b></a><div className="setting-row"><span><Radio size={16}/>Bridge</span><b className={online?'online-text':''}>{connection==='locked'?'Locked':online?'Online':'Offline'}</b></div><div className="setting-row"><span><Gamepad2 size={16}/>Demo</span><button role="switch" aria-checked={demo} aria-label="Demo mode" className={`toggle ${demo?'on':''}`} onClick={()=>{setDemo(d=>!d);setDemoEpoch(Date.now());setDemoReviewed({});setDemoCompleted({});}}><i/></button></div><div className="setting-row"><span>{night?<Moon size={16}/>:<Sun size={16}/>}Lighting</span><b>Automatic · SGT</b></div><div className="setting-row"><span><Pause size={16}/>Animations</span><button role="switch" aria-checked={!paused} aria-label="Animations" className={`toggle ${!paused?'on':''}`} onClick={()=>setPaused(v=>!v)}><i/></button></div><button className="settings-action" onClick={()=>void refresh()}><RefreshCw size={16}/>Refresh</button><button className="settings-action" onClick={lockOffice}><LogOut size={16}/>Lock</button><a className="settings-action" href="https://github.com/Ryanx-ai/ryancagents" target="_blank" rel="noreferrer"><GitBranch size={16}/>Source<ArrowUpRight size={13}/></a></div>}
   </section>}
   {error&&!selected&&!unlock&&<button className="toast" onClick={()=>setError('')}>{error}<X size={14}/></button>}
   </div>
+  {!unlock&&boardOpen&&<Blackboard data={board.data} loading={board.loading} error={demo?"Switch off Demo to use your live blackboard.":board.error} busyIds={board.busyIds} onRefresh={()=>board.refresh()} onCreate={board.create} onUpdate={board.update} onClose={()=>setBoardOpen(false)}/>}
   {!unlock&&creatingAgent&&<AgentCreator onClose={()=>setCreatingAgent(false)}/>}
   {!unlock&&profileAgent&&<CharacterCard agent={profileAgent} onClose={()=>setProfile(null)} onWardrobe={()=>openWardrobe(profileAgent.id)}/>}
   {!unlock&&wardrobeAgent&&<Wardrobe key={wardrobeAgent.id} agent={wardrobeAgent} onClose={()=>setWardrobe(null)}/>}

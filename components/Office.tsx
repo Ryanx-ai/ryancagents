@@ -108,7 +108,7 @@ function Actor({agent,index,state,mode,pendingReview,online,selected,onSelect,on
   <span className={`actor-name ${styles.nameplate}`}><i aria-hidden="true"/><span>{agent.name}</span><button type="button" className={styles.profileButton} onClick={onProfile} aria-label={`View ${agent.name} profile`} aria-haspopup="dialog" title={`View ${agent.name} profile`}><span aria-hidden="true">i</span></button></span>
  </div>;
 }
-export default function Office({states,selected,onSelect,onProfile,night,onNightChange,paused,reviewed,online=true}:{states:AgentState[];selected:AgentId|null;onSelect:(id:AgentId)=>void;onProfile:(id:AgentId)=>void;night:boolean;onNightChange:(night:boolean)=>void;paused:boolean;reviewed:Record<string,string>;online?:boolean}) {
+export default function Office({states,selected,onSelect,onProfile,night,onNightChange,paused,reviewed,online=true,boardNotes=[],onBoard}:{states:AgentState[];selected:AgentId|null;onSelect:(id:AgentId)=>void;onProfile:(id:AgentId)=>void;night:boolean;onNightChange:(night:boolean)=>void;paused:boolean;reviewed:Record<string,string>;online?:boolean;boardNotes?:Array<{id:string;title:string;done:boolean}>;onBoard?:()=>void}) {
  const camera=useRef<HTMLDivElement>(null);
  useEffect(()=>{if(selected&&camera.current){const el=camera.current;el.scrollTo({left:el.scrollWidth*places[selected].home/100-el.clientWidth/2,behavior:window.matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});}},[selected]);
  const working=(id:AgentId)=>states.find(s=>s.id===id)?.status==='working';
@@ -125,11 +125,11 @@ export default function Office({states,selected,onSelect,onProfile,night,onNight
    <rect width="1100" height="800" fill="#22272f"/>
    <rect x="33" y="43" width="1034" height="757" fill="url(#wall)"/><rect x="33" y="43" width="1034" height="535" fill="url(#bricks)"/>
    <path d="M33 42H1067V56H33Z" fill="#736653"/><path d="M33 57H1067" stroke="#b59769" strokeOpacity=".25" strokeWidth="3"/>
-   <Window x={152} y={94} w={264} h={132} night={night}/><Window x={606} y={94} w={264} h={132} showSunMoon night={night}/>
+   <Window x={251} y={94} w={165} h={132} night={night}/><Window x={606} y={94} w={264} h={132} showSunMoon night={night}/>
    <Pendant x={319} y={56}/><Pendant x={759} y={56}/>
    <rect x="33" y="281" width="956" height="48" fill="url(#floor)"/><path d="M26 280H995" stroke="#b09069" strokeWidth="7"/>
    <rect x="26" y="328" width="969" height="23" fill="#493d34"/><path d="M26 329H995" stroke="#c1a27d" strokeWidth="5"/><path d="M33 348H991" stroke="#262b2e" strokeWidth="7"/>
-   <Bookcase x={103} y={171}/><Plant x={453} y={268} scale={.8}/><Plant x={912} y={268} scale={.8}/>
+   <Plant x={453} y={268} scale={.8}/><Plant x={912} y={268} scale={.8}/>
    <g transform="translate(513 118)"><rect x="-73" y="-11" width="146" height="26" rx="2" fill="#292e34" stroke="#73634c"/><text className="office-sign-lettering" textAnchor="middle" y="6">Ryan HQ</text></g>
    <DigitalClock onNightChange={onNightChange}/>
    <g transform="translate(926 110)"><rect width="49" height="91" fill="#847462"/><rect x="5" y="5" width="39" height="81" fill="#554f4a"/>{['#c6a7df','#8bc6aa','#efb66d','#a6b5ff'].map((color,i)=><g key={color} transform={`translate(${10+i%2*18} ${13+Math.floor(i/2)*30})`}><rect width="13" height="21" fill="#e1d7c0"/><rect y="4" width="13" height="13" fill={color}/><circle cx="6" cy="1" r="2" fill="#c0aa7e"/></g>)}</g>
@@ -145,6 +145,7 @@ export default function Office({states,selected,onSelect,onProfile,night,onNight
    <g transform="translate(925 683)"><rect x="-36" y="0" width="78" height="65" rx="3" fill="#62574e"/><rect x="-33" y="4" width="72" height="13" fill="#b3a18b"/><path d="M-31 31H37M-31 49H37" stroke="#39352f" strokeWidth="3"/><path d="M-4 23H11M-4 41H11M-4 59H11" stroke="#b6a48b" strokeWidth="2"/><rect x="-18" y="-36" width="35" height="35" rx="3" fill="#242d32"/><rect x="-13" y="-31" width="25" height="12" fill="#5c6f6d"/><rect x="-9" y="-12" width="18" height="10" fill="#d0bfa1"/></g>
    <Plant x={1030} y={735} scale={1.15}/><Plant x={61} y={747} scale={.85}/>
   </svg>
+  {onBoard&&<button type="button" className={styles.blackboard} onClick={onBoard} aria-label={`Open today's blackboard${boardNotes.length?`, ${boardNotes.filter(note=>!note.done).length} open notes`:''}`} aria-haspopup="dialog"><span className={styles.boardTitle}>Today <span>{boardNotes.filter(note=>!note.done).length||'+'}</span></span><span className={styles.boardPapers}>{boardNotes.slice(0,4).map((note,i)=><span key={note.id} className={`${styles.boardPaper} ${note.done?styles.paperDone:''}`} style={{'--paper-tilt':`${i%2?3:-3}deg`,'--paper-color':['#e5cb86','#b9cbb3','#dcb9ae','#b6cbd4'][i%4]} as React.CSSProperties}>{note.title}</span>)}{!boardNotes.length&&<span className={styles.boardEmpty}>Pin a note <span>+</span></span>}</span><span className={styles.chalk}/></button>}
   {agents.map((agent,index)=>{const state=states.find(a=>a.id===agent.id)||emptyAgents.find(a=>a.id===agent.id)!;return <Actor key={agent.id} agent={agent} index={index} state={state} mode={avatarMode(state,reviewed,online)} pendingReview={needsReview(state,reviewed)} online={online} selected={selected===agent.id} onSelect={()=>onSelect(agent.id)} onProfile={()=>onProfile(agent.id)} paused={paused}/>;})}
   <div className="world-vignette"/>
  </div></div>;
