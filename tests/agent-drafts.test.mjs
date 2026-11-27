@@ -79,3 +79,23 @@ test('recovery preserves source draft metadata but rejects active, oversized and
  for(const invalid of [{...recovery,step:4},{...recovery,unlocked:2},{...recovery,form:{...input(),name:'x'.repeat(61)}},{...recovery,form:{...input(),activation:'enabled'}},{...recovery,editing:{...editing,status:'active'}},{...recovery,unsupported:true}])assert.throws(()=>saveAgentDraftRecovery(invalid,storage));
  const raw=JSON.stringify({...recovery,version:2});storage.setItem(AGENT_DRAFT_RECOVERY_KEY,raw);assert.ok(readAgentDraftRecovery(storage).error);assert.throws(()=>saveAgentDraftRecovery(recovery,storage));assert.equal(storage.getItem(AGENT_DRAFT_RECOVERY_KEY),raw);
 });
+
+test('existing version-one drafts and checkpoints remain valid without clothing colors',async()=>{
+ const {readAgentDraftRecovery}=await import('../lib/agent-drafts.mjs');
+ const draft=createAgentDraft(input());assert.equal(Object.hasOwn(draft,'palette'),false);assert.equal(Object.hasOwn(validateAgentDraft(draft),'palette'),false);
+ const imported=importAgentDraft(exportAgentDraft(draft));assert.equal(Object.hasOwn(imported,'palette'),false);
+ const storage=memory({'ryan-agent-draft-recovery-v1':JSON.stringify({version:1,form:input(),editing:draft,step:2,unlocked:2})});
+ const restored=readAgentDraftRecovery(storage);assert.equal(restored.error,null);assert.equal(Object.hasOwn(restored.recovery.form,'palette'),false);
+});
+
+test('optional clothing colors survive save, edit, export, import and unfinished recovery',async()=>{
+ const {saveAgentDraftRecovery,readAgentDraftRecovery}=await import('../lib/agent-drafts.mjs');
+ const palette={jacket:'#465575',shirt:'#EEE7D6',pants:'#303741'},draft=createAgentDraft({...input(),palette});
+ assert.deepEqual(draft.palette,{...palette,shirt:'#eee7d6'});
+ const storage=memory();saveAgentDraft(draft,storage);assert.deepEqual(readAgentDrafts(storage).drafts[0].palette,draft.palette);
+ assert.deepEqual(importAgentDraft(exportAgentDraft(draft)).palette,draft.palette);
+ const form={...input(),name:'',palette};saveAgentDraftRecovery({version:1,form,editing:draft,step:2,unlocked:2},storage);
+ assert.deepEqual(readAgentDraftRecovery(storage).recovery.form.palette,draft.palette);
+ const reset=createAgentDraft(input(),draft);assert.equal(Object.hasOwn(reset,'palette'),false);assert.equal(reset.id,draft.id);
+ for(const invalid of [null,{jacket:'red',shirt:'#ffffff',pants:'#000000'},{...palette,extra:'#ffffff'}])assert.throws(()=>createAgentDraft({...input(),palette:invalid}));
+});

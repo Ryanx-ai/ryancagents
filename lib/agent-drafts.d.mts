@@ -1,6 +1,7 @@
+import type {Palette} from './wardrobe.mjs';
 export type ConnectorId='gmail'|'calendar'|'contacts'|'sheets'|'gohighlevel'|'studio'|'codex';
 export type Outfit='standard'|'manager'|'designer';
-export type DraftInput={name:string;description:string;workflow:{trigger:string;input:string;steps:string[];output:string};outfit:Outfit;requestedConnectors:ConnectorId[]};
+export type DraftInput={name:string;description:string;workflow:{trigger:string;input:string;steps:string[];output:string};outfit:Outfit;palette?:Palette;requestedConnectors:ConnectorId[]};
 export type AgentDraft=DraftInput&{schemaVersion:1;id:string;status:'draft';connectorVerification:'not_verified';activation:'unavailable';createdAt:string;updatedAt:string};
 export type DraftStorage={getItem(key:string):string|null;setItem(key:string,value:string):void};
 export type DraftRecovery={version:1;form:DraftInput;editing:AgentDraft|null;step:number;unlocked:number};

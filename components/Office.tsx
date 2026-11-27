@@ -4,18 +4,23 @@ import {agents,emptyAgents,type AgentState,type AgentId,type Status} from '../li
 import {avatarMode,needsReview,nextCompletionCue,ambientStep,activityBubble} from '../lib/game-state.mjs';
 import {getOfficeTime} from '../lib/office-time.mjs';
 import styles from './Office.module.css';
+import {useWardrobe} from './WardrobeProvider';
+import {useRyanSheet} from './useRyanSheet';
+import type {Palette} from '../lib/wardrobe.mjs';
 
 const places:Record<AgentId,{home:number;floor:'upstairs'|'downstairs'}>={
  scheduler:{home:19,floor:'downstairs'},outreach:{home:39,floor:'downstairs'},contacts:{home:59,floor:'downstairs'},
  manager:{home:29,floor:'upstairs'},designer:{home:69,floor:'upstairs'},
  proposal:{home:79,floor:'downstairs'},
 };
-export function Ryan({status='idle',size=132,still=false,pose,manager=false,agentId}:{status?:Status;size?:number;still?:boolean;pose?:string;manager?:boolean;agentId?:AgentId}) {
+export function Ryan({status='idle',size=132,still=false,pose,manager=false,agentId,palette}:{status?:Status;size?:number;still?:boolean;pose?:string;manager?:boolean;agentId?:AgentId;palette?:Palette|null}) {
+ const savedPalette=useWardrobe(agentId);
+ const kind=agentId==='designer'?'designer':agentId==='manager'||manager?'manager':'standard';
  const state=pose||status;
  const row=state==='walk-right'?1:state==='walk-left'?2:state==='wave'?3:state==='celebrate'?4:state==='working'?7:state==='attention'||state==='waiting'?6:state==='error'?5:state==='review'?8:state==='look-up'?9:state==='look-down'?10:0;
+ const sheet=useRyanSheet(kind,palette===undefined?savedPalette:palette,still,row);
  const frames=row===3?4:row===4?5:[1,2,5,9,10].includes(row)?8:6;
- const sheet=agentId==='designer'?'/assets/designer-ryan.png':agentId==='manager'||manager?'/assets/manager-ryan-sheet.png':'/assets/maple-ryan.png';
- return <span aria-hidden="true" className={`ryan-sprite ${still?'still':''}`} style={{width:size,height:size*208/192,backgroundImage:`url(${sheet})`,backgroundSize:`${size*8}px ${size*208/192*11}px`,backgroundPositionY:-row*size*208/192,'--frame-end':`${-size*frames}px`,'--frames':frames} as React.CSSProperties}/>;
+ return <span aria-hidden="true" className={`ryan-sprite ${still?'still':''}`} style={{width:size,height:size*208/192,backgroundImage:`url(${sheet.url})`,backgroundSize:sheet.cropped?`${size}px ${size*208/192}px`:`${size*8}px ${size*208/192*11}px`,backgroundPositionY:sheet.cropped?0:-row*size*208/192,'--frame-end':`${-size*frames}px`,'--frames':frames} as React.CSSProperties}/>;
 }
 function Plant({x,y,scale=1}:{x:number;y:number;scale?:number}) {
  return <g transform={`translate(${x} ${y}) scale(${scale})`}><path d="M-13 0H13L9 26H-9Z" fill="#987450"/><path d="M-16 0H16V6H-16Z" fill="#bc9567"/><path d="M0 1V-48M0-17L-18-36M0-26L19-46" stroke="#47745e" strokeWidth="4"/><path d="M-3-29Q-31-25-27-48Q-5-48-3-29M1-38Q2-67 18-61Q28-45 1-38M3-19Q31-42 28-19Q20-9 3-19M-2-10Q-31-11-24-28Q-7-32-2-10" fill="#4f846c"/><path d="M-3-29L-22-44M2-39L15-55" stroke="#78a885" strokeWidth="2"/></g>;

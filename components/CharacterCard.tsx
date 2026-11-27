@@ -1,18 +1,18 @@
 'use client';
 
 import {useEffect,useId,useRef,type CSSProperties,type MouseEvent} from 'react';
-import {X} from 'lucide-react';
+import {Shirt,X} from 'lucide-react';
 import {type agents} from '../lib/model';
 import {Ryan} from './Office';
 import styles from './CharacterCard.module.css';
 
-type Props={agent:typeof agents[number];onClose:()=>void};
+type Props={agent:typeof agents[number];onClose:()=>void;onWardrobe?:()=>void};
 
 function Corner({className}:{className:string}) {
  return <svg className={className} viewBox="0 0 28 28" aria-hidden="true"><path d="M0 12V0H12V4H4V12ZM7 7H25V11H11V25H7Z" fill="currentColor"/><path d="M15 15H22V22H15Z" fill="var(--character-accent)"/></svg>;
 }
 
-export default function CharacterCard({agent,onClose}:Props) {
+export default function CharacterCard({agent,onClose,onWardrobe}:Props) {
  const dialogRef=useRef<HTMLDialogElement>(null);
  const dismissed=useRef(false);
  const backdropPress=useRef(false);
@@ -81,6 +81,7 @@ export default function CharacterCard({agent,onClose}:Props) {
      <h2 id={`${id}-name`}>{agent.name}</h2>
      <div className={styles.divider} aria-hidden="true"><span/></div>
      <p id={`${id}-role`}>{agent.profileDescription}</p>
+     {onWardrobe&&<button type="button" className={styles.wardrobe} aria-haspopup="dialog" onClick={()=>{dismiss();onWardrobe();}}><Shirt size={16} aria-hidden="true"/>Wardrobe</button>}
     </div>
    </div>
   </div>

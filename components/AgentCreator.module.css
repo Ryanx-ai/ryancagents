@@ -193,3 +193,9 @@
  .stages button[aria-current='step'], .outfit:has(input:checked), .connector:has(input:checked) { outline: 2px solid Highlight; outline-offset: -2px; }
  .mode, .sectionHeading p, .preview > p, .connector small { color: CanvasText; }
 }
+
+.paletteEditor { margin-top: 27px; }
+.paletteHeader { display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-bottom: 20px; }
+.paletteHeader h4 { color: #e6e1d1; font-size: 13px; font-weight: 500; margin: 0; }
+.paletteHeader button { display: inline-flex; align-items: center; gap: 6px; padding: 8px 0; min-height: 32px; color: #ddc28f; font-size: 11px; }
+.paletteHeader button:hover:not(:disabled) { color: #ffe0ac; text-decoration: underline; text-underline-offset: 4px; }

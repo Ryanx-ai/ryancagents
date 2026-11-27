@@ -80,3 +80,11 @@
 .canvas :global(.react-flow) { background:transparent; }
 
 .canvas :global(.react-flow__background) { background-color:transparent; }
+
+.silhouette>span { filter:brightness(0) invert(.65); opacity:.8; }
+.sandboxAgent { margin-top:8px; border-style:dashed; border-color:#b8cbdc33; }
+.activityEdge :global(.react-flow__edge-path) { stroke-dasharray:1 7!important; stroke-linecap:round; animation:none; }
+.flowing :global(.react-flow__edge-path) { animation:workflowDots 1.15s linear infinite!important; }
+@keyframes workflowDots { to { stroke-dashoffset:-16; } }
+@media(prefers-reduced-motion:reduce) { .flowing :global(.react-flow__edge-path) { animation:none!important; } }
+@media(max-width:800px) { .sandboxAgent { margin-top:0; } }
