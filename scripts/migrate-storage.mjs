@@ -16,9 +16,9 @@ try{
  messages.sort((a,b)=>Date.parse(a.createdAt)-Date.parse(b.createdAt));
  const completed={};
  for(const pathname of await paths('office/completion-reviews/')){
-  const match=/^office\/completion-reviews\/((?:scheduler|outreach|contacts|manager|designer)-\d+)\.json$/.exec(pathname);if(match)completed[match[1]]=true;
+  const match=/^office\/completion-reviews\/((?:scheduler|outreach|contacts|manager|designer|proposal)-\d+)\.json$/.exec(pathname);if(match)completed[match[1]]=true;
  }
- for(const id of ['scheduler','outreach','contacts','manager','designer']){const legacy=await read(`office/reviews/${id}.json`);const key=completionKey(id,legacy?.completedAt);if(key)completed[key]=true;}
+ for(const id of ['scheduler','outreach','contacts','manager','designer','proposal']){const legacy=await read(`office/reviews/${id}.json`);const key=completionKey(id,legacy?.completedAt);if(key)completed[key]=true;}
  const state=newOfficeState(messages,completed);
  if(!process.argv.includes('--apply')){console.log(JSON.stringify({status:'dry-run',messages:messages.length,reviews:Object.keys(completed).length,next:'Stop the old bridge, deploy the new API, then rerun with --apply.'}));process.exit(0);}
  await put(OFFICE_STATE_PATH,JSON.stringify(state),{access:'private',addRandomSuffix:false,allowOverwrite:false,contentType:'application/json',cacheControlMaxAge:60});

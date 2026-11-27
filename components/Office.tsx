@@ -8,6 +8,7 @@ import styles from './Office.module.css';
 const places:Record<AgentId,{home:number;floor:'upstairs'|'downstairs'}>={
  scheduler:{home:19,floor:'downstairs'},outreach:{home:39,floor:'downstairs'},contacts:{home:59,floor:'downstairs'},
  manager:{home:29,floor:'upstairs'},designer:{home:69,floor:'upstairs'},
+ proposal:{home:79,floor:'downstairs'},
 };
 export function Ryan({status='idle',size=132,still=false,pose,manager=false,agentId}:{status?:Status;size?:number;still?:boolean;pose?:string;manager?:boolean;agentId?:AgentId}) {
  const state=pose||status;
@@ -107,7 +108,7 @@ export default function Office({states,selected,onSelect,onProfile,night,onNight
  useEffect(()=>{if(selected&&camera.current){const el=camera.current;el.scrollTo({left:el.scrollWidth*places[selected].home/100-el.clientWidth/2,behavior:window.matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});}},[selected]);
  const working=(id:AgentId)=>states.find(s=>s.id===id)?.status==='working';
  return <div ref={camera} className={`office-camera ${night?'night':'day'} ${paused?'motion-paused':''}`}><div className="office-world office-world--duplex">
-  <svg className="world-art" viewBox="0 0 1100 800" preserveAspectRatio="none" role="img" aria-label="A two-storey pixel office. Four desks downstairs, including one empty desk. Manager Ryan and Designer Ryan have desks upstairs, beside a staircase.">
+  <svg className="world-art" viewBox="0 0 1100 800" preserveAspectRatio="none" role="img" aria-label="A two-storey pixel office. Inbox Ryan, Outreach Ryan, Network Ryan, and Proposal Ryan have four desks downstairs. Manager Ryan and Designer Ryan have desks upstairs, beside a staircase.">
    <defs>
     <linearGradient id="sky" x2="0" y2="1"><stop stopColor={night?'#252c47':'#859fa6'}/><stop offset="1" stopColor={night?'#83645f':'#dfc6a0'}/></linearGradient>
     <linearGradient id="wall" x2="0" y2="1"><stop stopColor="#454449"/><stop offset="1" stopColor="#34383e"/></linearGradient>
@@ -133,8 +134,7 @@ export default function Office({states,selected,onSelect,onProfile,night,onNight
    <path d="M53 57V328M1047 57V800M53 353V800" stroke="#524942" strokeWidth="23"/><path d="M46 57V328M1041 57V800M46 353V800" stroke="#7f6b52" strokeWidth="4"/>
    <rect x="33" y="580" width="1034" height="220" fill="url(#floor)"/><path d="M26 579H1074" stroke="#b09069" strokeWidth="7"/>
    <g aria-hidden="true"><path d="M976 594L1057 318" stroke="#383a3b" strokeWidth="11"/>{Array.from({length:12},(_,i)=><g key={i}><rect x={970+i*7} y={592-i*24} width="34" height="6" fill="#a38766"/><path d={`M${974+i*7} ${592-i*24}V${562-i*24}`} stroke="#747a75" strokeWidth="3"/></g>)}<path d="M973 562L1053 286" stroke="#c0ae87" strokeWidth="4"/><path d="M989 282H1065" stroke="#c0ae87" strokeWidth="4"/></g>
-   {(['scheduler','outreach','contacts'] as const).map(id=><Desk key={id} x={places[id].home*11} y={598} color={agents.find(a=>a.id===id)!.color} active={working(id)}/>)}
-   <Desk x={869} y={598} color="#939fa6" empty/>
+   {(['scheduler','outreach','contacts','proposal'] as const).map(id=><Desk key={id} x={places[id].home*11} y={598} color={agents.find(a=>a.id===id)!.color} active={working(id)}/>)}
    <Plant x={95} y={570} scale={.8}/><Plant x={946} y={567} scale={.65}/>
    <g transform="translate(123 697)"><ellipse cx="59" cy="43" rx="96" ry="18" fill="#332c2b" opacity=".35"/><rect x="-20" y="-20" width="146" height="47" rx="6" fill="#798578"/><path d="M29-15V25M77-15V25" stroke="#525e54" strokeWidth="3"/><rect x="-25" y="9" width="156" height="30" rx="5" fill="#626b63"/><rect x="-27" y="-1" width="15" height="38" rx="4" fill="#939889"/><rect x="118" y="-1" width="15" height="38" rx="4" fill="#939889"/><rect x="5" y="-7" width="23" height="23" rx="3" fill="#bc9c76"/><path d="M-9 39V48M114 39V48" stroke="#302d2c" strokeWidth="7"/></g>
    <g transform="translate(925 683)"><rect x="-36" y="0" width="78" height="65" rx="3" fill="#62574e"/><rect x="-33" y="4" width="72" height="13" fill="#b3a18b"/><path d="M-31 31H37M-31 49H37" stroke="#39352f" strokeWidth="3"/><path d="M-4 23H11M-4 41H11M-4 59H11" stroke="#b6a48b" strokeWidth="2"/><rect x="-18" y="-36" width="35" height="35" rx="3" fill="#242d32"/><rect x="-13" y="-31" width="25" height="12" fill="#5c6f6d"/><rect x="-9" y="-12" width="18" height="10" fill="#d0bfa1"/></g>

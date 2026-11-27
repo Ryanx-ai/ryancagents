@@ -4,6 +4,7 @@ import {Children, memo} from 'react';
 import Markdown, {type Components} from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import {messageLinkLabel, safeMessageUrl} from '../lib/message-links.mjs';
+import {normalizeMessageText,remarkLiteralHtml} from '../lib/message-content.mjs';
 import './message-content.css';
 
 const components: Components = {
@@ -22,7 +23,8 @@ const components: Components = {
 };
 
 const MessageContent=memo(function MessageContent({text}:{text:string}) {
-  return <div className="message-content"><Markdown skipHtml remarkPlugins={[remarkGfm]} urlTransform={safeMessageUrl} components={components}>{text}</Markdown></div>;
+  const content=normalizeMessageText(text);
+  return <div className="message-content">{content?<Markdown skipHtml remarkPlugins={[remarkGfm,remarkLiteralHtml]} urlTransform={safeMessageUrl} components={components}>{content}</Markdown>:<p className="message-content-empty">No summary was included. Open the original Codex chat for details.</p>}</div>;
 });
 
 export default MessageContent;

@@ -94,6 +94,7 @@
 .message-content .task-list-item { padding-left: 0; }
 .message-content .task-list-item > input { accent-color: #d5bd8b; width: 13px; height: 13px; margin: 0 8px 0 0; vertical-align: middle; opacity: 1; }
 .message-content .message-image-alt { color: #bfcfce; font-style: italic; }
+.message-content p.message-content-empty { color: #c4d2d5; font-style: italic; }
 @media (max-width: 600px) {
   .message-content th,
   .message-content td { padding: 8px; }

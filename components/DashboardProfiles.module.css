@@ -29,8 +29,13 @@
   color: #c4bba9;
 }
 
-@media (max-width: 380px) and (max-height: 660px) {
+@media (max-width: 420px) and (max-height: 660px) {
   .loadout:global(.hud-bottom) {
     flex-direction: column;
   }
+}
+
+@media (max-width: 380px) {
+  .loadout:global(.hud-bottom) :global(.agent-switcher) { gap: 5px; }
+  .loadout:global(.hud-bottom) :global(.avatar-shortcut) { width: 34px; }
 }

@@ -50,7 +50,7 @@ export class PromptRelay {
    const plan=await this.plan(this.config,input.prompt,{office:this.context,conversation:history});
    entry.plan=plan;entry.assignments=plan.assignments.map(a=>({...a,id:new Date().toISOString().slice(0,10).replaceAll('-','')+'-'+randomUUID()}));await this.save();
    for(const assignment of entry.assignments){await this.request('POST',{...assignment,parentId:input.id});assignment.queued=true;await this.save();}
-   const names={scheduler:'Inbox Ryan',outreach:'Outreach Ryan',contacts:'Network Ryan',designer:'Designer Ryan'};
+   const names={scheduler:'Inbox Ryan',outreach:'Outreach Ryan',contacts:'Network Ryan',designer:'Designer Ryan',proposal:'Proposal Ryan'};
    entry.reply=(plan.summary+(entry.assignments.length?'\n\n'+entry.assignments.map(a=>`→ ${names[a.agentId]}: ${a.prompt}`).join('\n\n'):'')).slice(0,12000);
    entry.status='replied';entry.completedAt=new Date().toISOString();entry.repliedAt=entry.completedAt;entry.dirty=true;await this.save();
   }catch{entry.status='uncertain';entry.reply='I could not confirm the full request. Check the agent chats before retrying.';entry.dirty=true;await this.save();}

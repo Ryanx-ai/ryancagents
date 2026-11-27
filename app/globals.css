@@ -241,7 +241,7 @@
 }
 .review-sheet .review-agents {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 .review-sheet .review-agents button { justify-content: center; min-width: 0; }
 .review-sheet .review-agents svg { display: none; }

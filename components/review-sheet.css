@@ -11,7 +11,7 @@
 .review-overview{display:flex;align-items:center;gap:22px;padding:0 0 18px;color:#ccd8df;font-size:12px}
 .review-overview span{display:flex;align-items:baseline;gap:7px}
 .review-overview b{font-family:'Space Grotesk',sans-serif;font-size:25px;line-height:1;color:#f4dab0;font-weight:500}
-.review-links{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px}
+.review-links{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
 .review-links>a,.review-links>button{display:flex;flex-direction:column;justify-content:center;align-items:center;gap:7px;min-height:62px;border:1px solid #d3e2e226;border-radius:8px;padding:9px 4px;color:#edf2f1;background:#d2e5ef08;font-size:10px;text-align:center;min-width:0}
 .review-links span{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .review-links>button>svg:last-child{display:none}

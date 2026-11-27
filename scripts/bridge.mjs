@@ -3,6 +3,7 @@ import { createHash } from 'node:crypto';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { LABELS, parseRecord, validateSnapshot } from '../lib/telemetry.mjs';
+import {normalizeMessageText} from '../lib/message-content.mjs';
 import { PromptRelay } from './prompt-relay.mjs';
 import {RequestBackoff,responseError} from './backoff.mjs';
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
@@ -28,8 +29,11 @@ async function readAgent(agent){
    for(const line of lines){let record;try{record=JSON.parse(line);}catch{continue;}relay.observe(agent.id,record);const parsed=parseRecord(record);if(!parsed||!record.timestamp)continue;
     const at=Date.parse(record.timestamp);if(!Number.isFinite(at))continue;
     if(!state.last||at>=Date.parse(state.last)){state.last=record.timestamp;state.status=parsed.status;state.activity=LABELS[parsed.kind];}
+    // Quiet heartbeat endings update presence without replacing useful work or
+    // adding another item to the bounded activity/review history.
+    if(parsed.kind==='idle')continue;
     if(parsed.kind==='completed')state.completedAt=record.timestamp;
-    if(record.type==='event_msg'&&record.payload?.type==='task_complete')state.result=Buffer.from(String(record.payload.last_agent_message||''),'utf8').subarray(0,4000).toString('utf8');
+    if(record.type==='event_msg'&&record.payload?.type==='task_complete'&&['completed','waiting'].includes(parsed.kind))state.result=Buffer.from(normalizeMessageText(String(record.payload.last_agent_message||'')),'utf8').subarray(0,4000).toString('utf8');
     if(parsed.status==='waiting'||parsed.status==='error')state.attentionAt=record.timestamp;
     const id=createHash('sha256').update(agent.id+record.timestamp+parsed.kind).digest('hex').slice(0,24);
     history.set(id,{id,agentId:agent.id,at:record.timestamp,...parsed,label:LABELS[parsed.kind]});

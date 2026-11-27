@@ -10,9 +10,9 @@ test('Designer Ryan is accepted consistently through prompts, manager assignment
  assert.equal(commandInput({id,agentId:'designer',prompt:'Review this layout'}).agentId,'designer');
  assert.equal(validatePlan({summary:'Design review',assignments:[{agentId:'designer',prompt:'Review this layout'}]}).assignments[0].agentId,'designer');
  const snapshot=validateSnapshot({version:1,observedAt:at,agents:IDS.map(agentId=>({id:agentId,status:'idle',activity:LABELS.idle,updatedAt:at,completedAt:agentId==='designer'?at:null})),events:[]});
- assert.equal(snapshot.agents.length,5);assert.equal(knownCompletion(snapshot,'designer',at),true);
+ assert.equal(snapshot.agents.length,6);assert.equal(knownCompletion(snapshot,'designer',at),true);
  const key=completionKey('designer',at);assert.equal(reviewWatermarks({},{[key]:true}).designer,at);
- assert.throws(()=>validatePlan({summary:'Invalid',assignments:[{agentId:'proposal',prompt:'Review'}]}));
+ assert.throws(()=>validatePlan({summary:'Invalid',assignments:[{agentId:'unknown-agent',prompt:'Review'}]}));
 });
 test('human prompt input cannot forge a trusted spending source or parent assignment',()=>{
  const parsed=commandInput({id,agentId:'manager',prompt:'Summarize',source:'vercel-spending',parentId:'forged',spending:{test:true}});

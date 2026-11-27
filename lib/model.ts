@@ -1,4 +1,4 @@
-export type AgentId = 'scheduler' | 'outreach' | 'contacts' | 'manager' | 'designer';
+export type AgentId = 'scheduler' | 'outreach' | 'contacts' | 'manager' | 'designer' | 'proposal';
 export type Status = 'working' | 'idle' | 'waiting' | 'error' | 'offline';
 export type Activity = { id: string; agentId: AgentId; at: string; kind: string; label: string; status: Status };
 export type AgentState = { id: AgentId; status: Status; activity: string; updatedAt: string | null; completedAt?: string | null; attentionAt?: string | null; result?: string | null; sessionStartedAt?: string | null };
@@ -9,5 +9,6 @@ export const agents = [
   { id: 'contacts' as const, profileDescription: 'Populates, scrapes, and compares your contact map.', name: 'Network Ryan', role: 'Contacts & GoHighLevel', color: '#8bc6aa', short: 'NR', integrations: ['Contact map', 'GoHighLevel'], description: 'Researches the right people and keeps your CRM in sync.', steps: ['Research contacts', 'Check GoHighLevel', 'Update contact map'], thread: '01a1e798-e941-74f3-9e0b-4bab573ba6c4' },
   { id: 'manager' as const, profileDescription: 'Your main control panel. Give him a task and he delegates to the right agents.', name: 'Manager Ryan', role: 'Office manager', color: '#efdab0', short: 'MR', integrations: ['Codex', 'All agents'], description: 'Summarizes the office and delegates your requests.', steps: ['Review the office', 'Plan assignments', 'Delegate'], thread: '01a216eb-566e-7dd1-ab32-f5adc3c57f89' },
   { id: 'designer' as const, profileDescription: 'Handles UI fixes and design changes.', name: 'Designer Ryan', role: 'Design & development', color: '#c6a7df', short: 'DR', integrations: ['Codex', 'Ryan HQ'], description: 'Designs and builds your office.', steps: ['Explore the brief', 'Design & build', 'Review & refine'], thread: '01a216a1-1bbb-7750-9489-3ddbbcf002ef' },
+  { id: 'proposal' as const, profileDescription: 'Creates, edits, and maintains your proposals in Proposal Studio.', name: 'Proposal Ryan', role: 'Proposals & presentations', color: '#83c5d9', short: 'PR', integrations: ['Codex', 'Proposal Studio'], description: 'Turns your brief into an editable proposal for review.', steps: ['Read brief', 'Draft proposal', 'Review & refine'], thread: '01a2171e-4186-74d2-a950-e074cd6f060b' },
 ];
 export const emptyAgents: AgentState[] = agents.map(a => ({ id: a.id, status: 'offline', activity: 'Waiting for the local bridge', updatedAt: null }));

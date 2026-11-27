@@ -4,13 +4,14 @@ import {ArrowUpRight,Check,ChevronRight,RefreshCw,TriangleAlert,MessageSquare,Gi
 import {agents,type AgentId,type AgentState,type Activity as AgentActivity} from '../lib/model';
 import {completionRows} from '../lib/completions.mjs';
 import {extractMessageLinks} from '../lib/message-links.mjs';
+import {normalizeMessageText} from '../lib/message-content.mjs';
 import MessageContent from './MessageContent';
 import IntegrationLogo,{integrationMeta,type IntegrationName} from './IntegrationLogo';
 import './review-sheet.css';
 
 type Completion={id:string;agentId:AgentId;completedAt:string;title:string;result?:string|null;current:boolean;done:boolean};
-const services:IntegrationName[]=['gmail','calendar','contacts','sheets','gohighlevel'];
-const serviceLabels:Record<string,string>={gmail:'Gmail',calendar:'Calendar',contacts:'Contacts',sheets:'Sheets',gohighlevel:'GHL'};
+const services:IntegrationName[]=['gmail','calendar','contacts','sheets','gohighlevel','studio'];
+const serviceLabels:Record<string,string>={gmail:'Gmail',calendar:'Calendar',contacts:'Contacts',sheets:'Sheets',gohighlevel:'GHL',studio:'Studio · Mac'};
 function timestamp(at:string){return new Intl.DateTimeFormat('en-SG',{timeZone:'Asia/Singapore',day:'numeric',month:'short',hour:'numeric',minute:'2-digit'}).format(new Date(at));}
 function preview(text:string){const first=text.trim().split(/\n\s*\n/)[0].replace(/\[([^\]]+)\]\([^)]+\)/g,'$1').replace(/(^|\s)#{1,6}\s/g,'$1').replace(/[*_`]/g,'').replace(/\s+/g,' ');return first.length>240?first.slice(0,237)+'…':first;}
 
@@ -30,13 +31,13 @@ export default function ReviewSheet({states,events,reviewed,completed,online,pen
   <nav className="review-agents" aria-label="Agent shortcuts">{agents.map(a=><button key={a.id} onClick={()=>onSelect(a.id)}><i style={{background:a.color}}/>{a.name.replace(' Ryan','')}<MessageSquare size={12}/></button>)}</nav>
   <div className="review-tabs" role="group" aria-label="Filter completions">{(['review','done','all'] as const).map(value=><button key={value} aria-pressed={filter===value} onClick={()=>setFilter(value)}>{value==='review'?'To review':value==='done'?'Done':'All'}<span>{value==='review'?toReview.length:value==='done'?rows.length-toReview.length:rows.length}</span></button>)}</div>
   <div className="review-list">
-   {filter!=='done'&&attention.filter(a=>!visible.some(r=>r.agentId===a.id&&r.current)).map(a=><article className="review-item attention-item" key={`attention-${a.id}`}><div className="review-item-heading"><strong>{agents.find(agent=>agent.id===a.id)?.name}</strong><span className="review-state attention"><TriangleAlert size={12}/>Needs attention</span></div><p className="review-summary">{preview(a.result||a.activity)}</p><div className="review-actions"><button onClick={()=>onSelect(a.id)}>Open Ryan<ChevronRight size={14}/></button></div></article>)}
-   {visible.map(row=>{const agent=agents.find(a=>a.id===row.agentId)!;const links=extractMessageLinks(row.result||'');const needsAttention=attention.some(a=>a.id===row.agentId)&&row.current;
+   {filter!=='done'&&attention.filter(a=>!visible.some(r=>r.agentId===a.id&&r.current)).map(a=><article className="review-item attention-item" key={`attention-${a.id}`}><div className="review-item-heading"><strong>{agents.find(agent=>agent.id===a.id)?.name}</strong><span className="review-state attention"><TriangleAlert size={12}/>Needs attention</span></div><p className="review-summary">{preview(normalizeMessageText(a.result||'')||a.activity)}</p><div className="review-actions"><button onClick={()=>onSelect(a.id)}>Open Ryan<ChevronRight size={14}/></button></div></article>)}
+   {visible.map(row=>{const agent=agents.find(a=>a.id===row.agentId)!;const result=normalizeMessageText(row.result||'');const links=extractMessageLinks(result);const needsAttention=attention.some(a=>a.id===row.agentId)&&row.current;
     return <article className={`review-item ${row.done?'is-done':''}`} key={row.id}>
      <div className="review-item-heading"><strong><i style={{background:agent.color}}/>{agent.name}</strong><span className={`review-state ${needsAttention?'attention':''}`}>{row.done?<><Check size={12}/>Done</>:needsAttention?<><TriangleAlert size={12}/>Needs attention</>:'To review'}</span></div>
      <time dateTime={row.completedAt}>{timestamp(row.completedAt)}</time>
-     <p className="review-summary">{row.result?preview(row.result):row.title}</p>
-     {row.result&&<details className="review-result"><summary>Read result<ChevronRight size={13}/></summary><MessageContent text={row.result}/></details>}
+     <p className="review-summary">{result?preview(result):row.title}</p>
+     {result&&<details className="review-result"><summary>Read result<ChevronRight size={13}/></summary><MessageContent text={result}/></details>}
      {links.length>0&&<nav className="result-quicklinks" aria-label={`${agent.name} result links`}>{links.map(link=><a key={link.href} href={link.href} target="_blank" rel="noopener noreferrer">{link.label}<ArrowUpRight size={12}/></a>)}</nav>}
      <div className="review-actions">{row.current&&<button onClick={()=>onSelect(row.agentId)}>Open Ryan<ChevronRight size={14}/></button>}<a href={`codex://threads/${agent.thread}`}>Codex<ArrowUpRight size={13}/></a>{!row.done&&<button className="mark-done" disabled={pending[row.id]} onClick={()=>onDone(row.agentId,row.completedAt)}>{pending[row.id]?<RefreshCw className="spin" size={14}/>:<Check size={14}/>}Mark done</button>}</div>
     </article>;
