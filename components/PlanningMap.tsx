@@ -56,9 +56,9 @@ export default function PlanningMap({states,onSelect,online=false,paused=false,o
  const edges=useMemo(()=>savedEdges.map(edge=>{
   const source=nodes.find(node=>node.id===edge.source),target=nodes.find(node=>node.id===edge.target);
   const moving=online&&!paused&&source?.data.agentId===target?.data.agentId&&states.find(state=>state.id===source?.data.agentId)?.status==='working';
-  return {...edge,reconnectable:false,deletable:false,animated:moving,className:`${workflowStyles.activityEdge} ${moving?workflowStyles.flowing:''}`,style:{stroke:agents.find(agent=>agent.id===source?.data.agentId)?.color||'#a6bdca',strokeWidth:2}};
+  return {...edge,type:'default',reconnectable:false,deletable:false,animated:moving,className:`${workflowStyles.activityEdge} ${moving?workflowStyles.flowing:''}`,style:{stroke:agents.find(agent=>agent.id===source?.data.agentId)?.color||'#a6bdca',strokeWidth:2}};
  }),[savedEdges,nodes,states,online,paused]);
- return <section className="workflow-panel workflow-polished"><div className="workflow-toolbar"><span className="planning-chip"><LockKeyhole size={12}/>Read-only saved map</span>{onSandbox&&<button className="subtle-button" onClick={onSandbox}>Play in Dummy Ryan<ArrowUpRight size={14}/></button>}</div>
+ return <section className="workflow-panel workflow-polished"><div className="workflow-toolbar"><span className="planning-chip"><LockKeyhole size={12}/>Read-only saved map</span>{onSandbox&&<button className="subtle-button" onClick={onSandbox}>Open Sandbox<ArrowUpRight size={14}/></button>}</div>
   <Actions.Provider value={actions}><div className="flow-canvas"><ReactFlow nodes={lockedNodes} edges={edges} nodeTypes={nodeTypes} nodesDraggable={false} nodesConnectable={false} edgesReconnectable={false} deleteKeyCode={null} fitView fitViewOptions={{padding:'5%'}} minZoom={.3} maxZoom={1.8} zoomOnDoubleClick={false}><Background gap={22} size={1} color="#64717c"/><Controls showInteractive={false}/><MiniMap nodeColor={node=>agents.find(agent=>agent.id===node.data.agentId)?.color||'#aaa'} maskColor="rgba(17,21,26,.55)"/></ReactFlow></div></Actions.Provider>
  </section>;
 }

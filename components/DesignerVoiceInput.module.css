@@ -1,0 +1,35 @@
+.voice { min-width: 0; width: 100%; }
+.trigger { display: inline-flex; align-items: center; gap: 6px; min-height: 30px; padding: 5px 0; color: #d7c399; font-size: 11px; line-height: 1.5; }
+.trigger:hover:not(:disabled) { color: #ffe1a7; }
+.trigger > span { padding: 1px 5px; border: 1px solid #ccb57e33; border-radius: 4px; font-size: 9px; color: #b8c2bf; }
+.panel { min-width: 0; max-height: min(360px, 38dvh); overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: #6e818b transparent; margin: 6px 0 10px; padding: 13px; border: 1px solid #cab48150; border-radius: 8px; background: rgb(18 31 41 / 90%); color: #e4e5d9; box-shadow: inset 0 1px #f8e6bb0a; }
+.header { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
+.header > span { display: flex; align-items: center; gap: 7px; color: #e7cfa2; font-size: 12px; font-weight: 500; }
+.close { display: grid; place-items: center; width: 28px; height: 28px; padding: 0; color: #afc1c8; border-radius: 4px; }
+.close:hover { background: #d3dfe710; color: #eee2c9; }
+.panel .disclosure, .panel .footnote { margin: 0; font-size: 11px; line-height: 1.6; color: #b4c3ca; }
+.panel .footnote { margin-top: 10px; font-size: 10px; }
+.panel .unavailable, .panel .error, .panel .notice { margin: 12px 0 0; font-size: 11px; line-height: 1.6; overflow-wrap: anywhere; }
+.panel .unavailable { color: #c7d1d1; }
+.panel .error { color: #efbfa2; }
+.panel .notice { color: #dfc999; }
+.capture { margin-top: 13px; padding: 11px; border: 1px solid #b5c9cd21; border-radius: 5px; background: #09192366; }
+.recording { display: flex; align-items: center; gap: 7px; color: #e8c798; font-size: 11px; line-height: 1.5; }
+.recordDot { width: 6px; height: 6px; flex-shrink: 0; border-radius: 50%; background: #e8a686; box-shadow: 0 0 0 3px #e8a68615; }
+.panel .liveText { margin: 9px 0 0; max-height: 100px; min-height: 30px; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 12px; line-height: 1.7; color: #e1e6dd; }
+.liveText > span { color: #a6b8c1; }
+.transcriptLabel { display: block; margin: 14px 0 0; font-size: 11px; color: #dce2d8; line-height: 1.5; }
+.voice .panel textarea.transcript { display: block; width: 100%; height: 104px; min-height: 80px; max-height: 180px; resize: vertical; margin: 7px 0 0; padding: 10px; color: #eef0e3; background: #0b1b268f; border: 1px solid #aebfc94a; border-radius: 5px; font-size: 13px; line-height: 1.65; outline: none; }
+.voice .panel textarea.transcript:focus-visible { outline: 2px solid #e5c58d; outline-offset: 2px; }
+.voice .panel textarea.transcript::placeholder { color: #9cafbb; }
+.count { display: block; margin-top: 6px; font-size: 10px; color: #a8bbc4; }
+.actions { display: flex; justify-content: flex-end; align-items: center; flex-wrap: wrap; gap: 7px; margin-top: 13px; }
+.actions > button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 34px; padding: 8px 10px; border-radius: 5px; font-size: 11px; line-height: 1.4; }
+.secondary { border: 1px solid #aebfc931; color: #c4d0d2; }
+.secondary:hover { background: #d2e2e50b; }
+.primary { border: 1px solid #edcf9d; color: #283740; background: #e4c38d; font-weight: 600; }
+.primary:hover:not(:disabled) { background: #f3d6a3; }
+.spin { animation: voiceSpin 1s linear infinite; }
+@keyframes voiceSpin { to { transform: rotate(360deg); } }
+@media (max-width: 370px) { .panel { padding: 11px; } .actions { gap: 5px; } .actions > button { padding-inline: 8px; font-size: 10px; } }
+@media (prefers-reduced-motion: reduce) { .spin { animation: none; } }
