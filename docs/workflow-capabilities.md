@@ -50,4 +50,8 @@ All five worker cards are eligible requested-assignment destinations. Opening a 
 
 ## Maintenance
 
-Update the catalog only when source instructions or implementation change, record the source-review date, and retain material limitations. Do not copy live credentials, private client data, full local paths or transient campaign state into this client-visible module. Keep prospective integrations explicitly planned or outside the operational stages until evidence supports them.
+The **Rules** tab reads [`lib/workflow-rules.ts`](../lib/workflow-rules.ts): 45 documented requirements across the six existing agents. Rules are grouped into checks, review gates and scope, each with a requirement, a hold condition, related stages and a logical source reference. The top Rules control shows the full list; node shield counts open the applicable subset. These counts are not passed checks. No worker settings, execution gates, API calls or polling are added by this view.
+
+Network's Contact Map rules distinguish normal research operations from activity-field writes. The latter require current schema/backfill readiness, native tab/header and row-identity checks, field ownership, correct validation, formula-view preservation and readback. Research completion, valid structure and human review remain separate from outreach release.
+
+Update the catalog and rules only when source instructions or implementation change, record the source-review date, and retain material limitations. Do not copy live credentials, private client data, full local paths or transient campaign state into these client-visible modules. Keep prospective integrations explicitly planned or outside the operational stages until evidence supports them. The focused rules tests verify complete agent coverage and valid stage mappings; they do not execute or certify the underlying worker checks.

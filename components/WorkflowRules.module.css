@@ -1,0 +1,31 @@
+.rules { min-width: 0; }
+.rules .header h4 { display: flex; align-items: center; gap: 7px; margin: 0 0 9px; color: #f1e6cd; font-size: 18px; font-weight: 500; }
+.header h4 > span { margin-left: auto; font-size: 12px; font-weight: 400; color: #c8bb9d; }
+.rules .header p { color: #b7c8d1; font-size: 11px; line-height: 1.65; margin: 0; }
+.context { display: flex; flex-direction: column; align-items: start; gap: 6px; margin: 17px 0 21px; padding: 12px; border: 1px solid #c7b48645; border-radius: 6px; background: #d8bd7f08; }
+.context > span { color: #b6c7ce; font-size: 10px; }
+.context > strong { color: #ead4ad; font-size: 13px; line-height: 1.5; font-weight: 500; }
+.context > button { display: inline-flex; align-items: center; gap: 8px; min-height: 32px; padding: 6px 0 0; color: #d3e0e4; font-size: 11px; text-decoration: underline; text-underline-offset: 4px; }
+.context > button > span { color: #a9bdc7; text-decoration: none; }
+.rules .all { margin: 18px 0 0; padding-top: 13px; border-top: 1px solid #b9cbd522; color: #cbd7d9; font-size: 11px; }
+.group { margin-top: 21px; }
+.group h5 { margin: 0 0 10px; color: #d3c4a6; font-size: 11px; font-weight: 500; }
+.cards { display: grid; gap: 12px; }
+.card { min-width: 0; padding: 13px; border: 1px solid #a9bfcb2b; border-radius: 7px; background: #10232c3b; }
+.card h6 { margin: 0 0 9px; color: #efe5d0; font-size: 13px; font-weight: 600; line-height: 1.5; overflow-wrap: anywhere; }
+.rules .card .requirement { color: #d0dde1; font-size: 12px; line-height: 1.7; margin: 0; }
+.hold { margin-top: 13px; padding-left: 10px; border-left: 2px solid #c5a57378; }
+.hold > span { color: #d6bb8e; font-size: 10px; }
+.rules .hold p { color: #d2cab8; font-size: 11px; line-height: 1.7; margin: 4px 0 0; }
+.steps { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 14px; }
+.steps > button { display: inline-flex; align-items: center; gap: 6px; min-height: 32px; max-width: 100%; padding: 6px 7px; border: 1px solid #b8cbd329; border-radius: 4px; color: #b8d0dc; background: #c4d9e105; font-size: 10px; line-height: 1.5; text-align: left; }
+.steps > button > span { min-width: 0; overflow-wrap: anywhere; }
+.steps > button > svg { flex-shrink: 0; }
+.steps > button:hover { border-color: #b8cbd367; color: #e0edf0; }
+.source { margin-top: 12px; border-top: 1px solid #b1c3cc1b; padding-top: 7px; }
+.source summary { min-height: 28px; padding: 5px 0; color: #9fb5c1; font-size: 10px; cursor: pointer; }
+.source code { display: block; margin: 5px 0 0; color: #acbec8; font: 10px/1.6 monospace; overflow-wrap: anywhere; }
+.rules .empty { margin: 18px 0; color: #c1cfd4; font-size: 12px; line-height: 1.7; }
+.empty > button { padding: 8px 0; color: #e4c99f; font-size: 12px; text-decoration: underline; text-underline-offset: 4px; }
+.rules button:focus-visible, .source summary:focus-visible { outline: 2px solid #efc88e; outline-offset: 3px; }
+@media (max-width: 800px) { .card { padding: 15px; } .rules .card .requirement { font-size: 13px; } .rules .hold p { font-size: 12px; } .steps > button { min-height: 44px; font-size: 11px; } .context > button, .source summary { min-height: 44px; } }

@@ -27,7 +27,7 @@
 .graphArea { min-width:0; min-height:0; display:flex; flex-direction:column; background:rgb(13 23 31 / 24%); }
 .graphLabel { display:flex; justify-content:space-between; gap:10px; padding:15px 18px 4px; font-size:10px; color:#a9bcc6; }
 .graphLabel>span { display:inline-flex; align-items:center; gap:6px; }
-.graphLabel>button { display:inline-flex; align-items:center; gap:6px; min-height:32px; margin-top:-8px; color:#d8d5c4; padding:4px 8px; border:1px solid #b8cbd52e; border-radius:6px; font-size:10px; }
+.graphActions>button { display:inline-flex; align-items:center; gap:6px; min-height:32px; margin-top:-8px; color:#d8d5c4; padding:4px 8px; border:1px solid #b8cbd52e; border-radius:6px; font-size:10px; }
 .topologySummary { color:#b5c7d2; font-size:11px; line-height:1.55; padding:6px 18px 10px; max-width:100ch; }
 .canvas { flex:1; min-height:200px; }
 .canvas :global(.react-flow__handle) { background:var(--flow-accent)!important; border-color:#304450!important; width:8px!important; height:8px!important; }
@@ -53,7 +53,7 @@
 .inspector { min-height:0; min-width:0; display:flex; flex-direction:column; border-left:1px solid #dce9ee1c; background:rgb(28 43 54 / 46%); }
 .tabs { display:flex; border-bottom:1px solid #dce9ee19; flex-shrink:0; }
 .tabs button { flex:1; padding:0 7px; height:46px; font-size:11px; color:#a8bdc8; border-bottom:2px solid transparent; }
-.tabs button[aria-pressed=true] { color:#f0e9d8; border-bottom-color:var(--flow-accent); }
+.tabs button[aria-selected=true] { color:#f0e9d8; border-bottom-color:var(--flow-accent); }
 .inspectorBody { padding:19px; overflow:auto; min-height:0; scrollbar-width:thin; }
 .detailKind { color:var(--flow-accent); font-size:10px; text-transform:capitalize; }
 .inspectorBody h4 { display:flex; align-items:center; gap:7px; font-size:17px; font-weight:500; line-height:1.35; margin:7px 0 12px; }
@@ -107,7 +107,7 @@
 .handoffEdge :global(.react-flow__edge-path) { stroke-dasharray:6 5!important; animation:none!important; }
 .projectionEdge :global(.react-flow__edge-path) { stroke-dasharray:3 5!important; animation:none!important; }
 @media(max-width:800px) {
- .graphLabel { align-items:center; }.graphLabel>button { min-height:44px; margin-top:0; }.topologySummary { padding:8px 14px 2px; font-size:12px; line-height:1.6; }
+ .graphLabel { align-items:center; }.graphActions>button { min-height:44px; margin-top:0; }.topologySummary { padding:8px 14px 2px; font-size:12px; line-height:1.6; }
  .mobileStage { min-width:0; border:1px solid #b1c5d02e; border-radius:9px; background:#20344059; overflow:hidden; }
  .mobileStage>button { width:100%; border:0; border-radius:0; background:#263a464d; }
  .mobileStage>button[aria-pressed=true] { box-shadow:inset 3px 0 var(--flow-accent); }
@@ -120,4 +120,26 @@
  .mobileRoutes button:hover { color:#f8dfa9; text-decoration:underline; }
  .mobileSprite { width:26px!important; height:30px; display:flex; justify-content:center; align-items:center; overflow:hidden; }
  .inspectorHeading { padding:8px 15px; }.inspectorHeading>button { width:44px; height:44px; }
+}
+
+/* Documented requirements remain distinct from live activity. */
+.stageNode { position: relative; }
+.stageNode .stageKind { padding-right: 32px; }
+.nodeRules { position: absolute; top: 9px; right: 8px; z-index: 2; display: inline-flex; align-items: center; justify-content: center; gap: 4px; min-width: 31px; min-height: 25px; padding: 4px 5px; border: 1px solid #cfb8875c; border-radius: 5px; background: #1b303b; color: #e2c99f; font-size: 10px; }
+.nodeRules:hover { border-color: #efcf98; background: #2c414b; }
+.nodeRules:focus-visible { outline: 2px solid #efc88e; outline-offset: 3px; }
+.graphLabel { flex-wrap: wrap; align-items: center; }
+.graphActions { display: flex; align-items: center; gap: 6px; margin-left: auto; }
+.graphActions>button { margin-top: 0; white-space: nowrap; }
+.graphActions>.rulesAccess { color: #e4cda5; border-color: #c9ae784a; background: #c9ae7808; }
+.rulesAccess>span { min-width: 14px; font-size: 10px; color: #b8c8cf; }
+.tabs button { min-width: 0; padding-inline: 4px; font-size: 10px; }
+.tabs button:focus-visible { outline-offset: -4px; }
+.inspectorBody:focus-visible { outline: 2px solid #efc88e; outline-offset: -3px; }
+@media(max-width:800px) {
+ .graphActions>button { min-height: 44px; }
+ .tabs button { font-size: 11px; }
+ .mobileStage>.mobileRuleBadge { display: flex; align-items: center; justify-content: flex-start; gap: 7px; min-height: 44px; padding: 7px 12px; border-top: 1px solid #b0c4d01a; color: #dfc9a1; background: #d3ba8106; font-size: 11px; }
+ .mobileStage>.mobileRuleBadge>span { width: auto; min-width: 17px; font-size: 10px; color: #bed0d9; }
+ .mobileStage>.mobileRuleBadge>svg { color: #dfc9a1; }
 }
