@@ -1,65 +1,123 @@
 'use client';
-import {createContext,useCallback,useContext,useEffect,useMemo,useState} from 'react';
-import {ReactFlow,Background,Controls,MiniMap,Handle,Position,addEdge,useNodesState,useEdgesState,type Connection,type NodeProps,type Node,type Edge} from '@xyflow/react';
-import '@xyflow/react/dist/style.css';
-import './workflow-polish.css';
-import {agents,type AgentState,type AgentId} from '../lib/model';
-import {ArrowUpRight,Check,Save,RotateCcw,Plus,Pencil,X} from 'lucide-react';
-import IntegrationLogo,{integrationMeta,type IntegrationName} from './IntegrationLogo';
 
-type FlowData={label:string;agentId:AgentId;index:number;status:string};
-const services:Record<AgentId,IntegrationName[][]>={
- scheduler:[['gmail'],['calendar'],['gmail','calendar']],
- outreach:[['contacts','sheets'],['gmail'],['gmail','sheets']],
- contacts:[['contacts'],['gohighlevel'],['sheets']],
- manager:[['codex'],['codex'],['codex']],
- designer:[['codex'],['codex'],['codex']],
- proposal:[['codex'],['studio'],['studio']],
-};
-const Actions=createContext<{open:(id:AgentId)=>void;rename:(id:string,label:string)=>void}|null>(null);
-function AgentNode({id,data,selected}:NodeProps<Node<FlowData>>){
- const actions=useContext(Actions)!;const agent=agents.find(a=>a.id===data.agentId)!;
- const marks=services[data.agentId][Math.abs(data.index)%3];
- return <div className={`flow-node ${selected?'selected':''}`} style={{'--agent-color':agent.color} as React.CSSProperties}>
-  <Handle type="target" position={Position.Left}/>
-  <div className="flow-node-top"><small>{agent.name}</small><span className={`flow-dot ${data.status}`} title={`${agent.name}: ${data.status}`} aria-label={`Agent activity: ${data.status}`}/></div>
-  <div className="flow-node-main"><div className={`flow-logo-stack ${marks.length>1?'multiple':''}`}>{marks.map(name=><span className="flow-service-mark" key={name} title={integrationMeta[name].label}><IntegrationLogo name={name} size={25} decorative/></span>)}</div><strong>{data.label}</strong></div>
-  <div className="flow-node-bottom"><span className="flow-services" title={marks.map(name=>integrationMeta[name].label).join(' · ')}>{marks.map(name=>name==='sheets'?'Sheets':name==='calendar'?'Calendar':name==='contacts'?'Contacts':integrationMeta[name].label).join(' · ')}</span><div className="flow-node-actions nodrag nopan"><button type="button" title={`Open ${agent.name}`} aria-label={`Open ${agent.name}`} onClick={e=>{e.stopPropagation();actions.open(data.agentId);}} onDoubleClick={e=>e.stopPropagation()}><ArrowUpRight size={15}/></button><button type="button" title="Rename step" aria-label={`Rename ${data.label}`} onClick={e=>{e.stopPropagation();actions.rename(id,data.label);}} onDoubleClick={e=>e.stopPropagation()}><Pencil size={13}/></button></div></div>
-  <Handle type="source" position={Position.Right}/>
+import {useEffect,useMemo,useRef,useState,type CSSProperties} from 'react';
+import dynamic from 'next/dynamic';
+import {ReactFlow,Background,Controls,Handle,Position,MarkerType,type Node,type NodeProps,type Edge} from '@xyflow/react';
+import {ArrowLeft,ArrowUpRight,GitBranch,History,Info,MessageSquare,Plus,ShieldCheck,Waypoints,Zap} from 'lucide-react';
+import '@xyflow/react/dist/style.css';
+import {agents,type AgentId,type AgentState,type Activity} from '../lib/model';
+import {workflowCatalog,type WorkflowStage} from '../lib/workflow-catalog';
+import IntegrationLogo,{integrationMeta,type IntegrationName} from './IntegrationLogo';
+import MessageContent from './MessageContent';
+import {Ryan} from './Office';
+import styles from './Workflow.module.css';
+
+const PlanningMap=dynamic(()=>import('./PlanningMap'),{loading:()=> <p className={styles.loading}>Opening sketchbook…</p>});
+type Receipt={id:string;agentId:AgentId;status:string;createdAt:string;pickedUpAt?:string;queuedAt?:string;deliveredAt?:string;repliedAt?:string};
+type Props={states:AgentState[];events?:Activity[];messages?:Receipt[];online?:boolean;demo?:boolean;onSelect:(id:AgentId)=>void;onCreate?:()=>void};
+type StageData={stage:WorkflowStage;color:string;incoming:Position;outgoing:Position;inspect:(id:string)=>void};
+const capabilityNames={codex:'Codex task',local:'On this Mac',manual:'Ryan action',planned:'Planned'};
+const stateNames:Record<string,string>={working:'Working',idle:'Idle',waiting:'Waiting',error:'Needs attention',offline:'Offline'};
+const routeHints:Partial<Record<AgentId,string>>={scheduler:'Triage branches into opt-outs, scheduling or meeting-change alerts.',manager:'Status questions return a summary. Requested work goes through scope checks before delegation.',proposal:'Review can loop back to the same draft. PDF export requires your request.'};
+const receiptNames:Record<string,string>={planning:'Planning request',pending:'Queued for Mac',queued:'Queued in Codex',delivered:'Delivered to chat',replied:'Reply received',uncertain:'Delivery uncertain · check chat',failed:'Delivery failed',expired:'Request expired'};
+
+function StageNode({data,selected}:NodeProps<Node<StageData>>) {
+ const {stage}=data;
+ const Icon=stage.kind==='trigger'?Zap:stage.kind==='review'?ShieldCheck:stage.kind==='output'?ArrowUpRight:Waypoints;
+ return <div style={{'--flow-accent':data.color} as CSSProperties}>
+  <Handle type="target" position={data.incoming} isConnectable={false}/>
+  {stage.id==='scheduler-output'&&<><Handle id="top" type="target" position={Position.Top} isConnectable={false}/><Handle id="bottom" type="target" position={Position.Bottom} isConnectable={false}/></>}
+  {stage.id==='proposal-template'&&<Handle id="refine" type="target" position={Position.Bottom} isConnectable={false}/>}
+  {stage.id==='manager-output'&&<Handle id="summary" type="target" position={Position.Top} isConnectable={false}/>}
+  <button type="button" className={`${styles.stage} ${selected?styles.selected:''} nodrag`} onClick={()=>data.inspect(stage.id)} aria-label={`Inspect ${stage.label}`} aria-pressed={selected}>
+   <span className={styles.stageKind}><Icon size={12}/>{stage.kind==='review'?'Review gate':stage.kind}</span>
+   <span className={styles.stageMain}>{stage.connector?<IntegrationLogo name={stage.connector} size={27} decorative/>:<Icon size={25}/>}<strong>{stage.label}</strong></span>
+   <span className={`${styles.capability} ${stage.capability==='planned'?styles.planned:''}`}>{capabilityNames[stage.capability]}</span>
+  </button>
+  <Handle type="source" position={data.outgoing} isConnectable={false}/>
+  {stage.id==='proposal-review'&&<Handle id="refine" type="source" position={Position.Top} isConnectable={false}/>}
+  {stage.id==='manager-context'&&<Handle id="summary" type="source" position={Position.Bottom} isConnectable={false}/>}
  </div>;
 }
-const nodeTypes={agent:AgentNode};
-const initialNodes:Node<FlowData>[]=agents.flatMap((agent,i)=>agent.steps.map((label,j)=>({id:`${agent.id}-${j}`,type:'agent',position:{x:35+j*310,y:30+i*132},data:{label,agentId:agent.id,index:i*3+j,status:'idle'}})));
-const initialEdges:Edge[]=agents.flatMap(agent=>[0,1].map(i=>({id:`${agent.id}-e${i}`,source:`${agent.id}-${i}`,target:`${agent.id}-${i+1}`,style:{stroke:agent.color,strokeWidth:1.5},animated:false})));
-function restoreLayout(saved:{version:number;nodes:Node<FlowData>[];edges:Edge[]}|null){
- if(![2,3,4].includes(saved?.version)||!Array.isArray(saved.nodes)||!Array.isArray(saved.edges)||saved.nodes.length>69)return null;
- const valid=saved.nodes.every(n=>n&&typeof n.id==='string'&&n.type==='agent'&&agents.some(a=>a.id===n.data?.agentId)&&typeof n.data?.label==='string'&&Number.isInteger(n.data?.index)&&Number.isFinite(n.position?.x)&&Number.isFinite(n.position?.y));
- const savedIds=new Set(saved.nodes.map(n=>n?.id));
- if(!valid||savedIds.size!==saved.nodes.length)return null;
- // Append new agent rows below the saved layout, keeping every existing
- // position and label. Version 4 saves respect deliberately removed rows.
- const addedAgents=agents.filter(a=>((saved.version===2&&a.id==='designer')||(saved.version<4&&a.id==='proposal'))&&!saved.nodes.some(n=>n.data.agentId===a.id));
- const nextRow=Math.max(30,...saved.nodes.map(n=>n.position.y+132));
- const additions=addedAgents.flatMap((agent,row)=>initialNodes.filter(n=>n.data.agentId===agent.id).map(n=>({...n,position:{...n.position,y:nextRow+row*132}})));
- const addedIds=new Set(additions.map(n=>n.id));
- return {nodes:[...saved.nodes,...additions],edges:[...saved.edges.filter(e=>e&&typeof e.id==='string'&&savedIds.has(e.source)&&savedIds.has(e.target)),...initialEdges.filter(e=>addedIds.has(e.source))]};
+const nodeTypes={stage:StageNode};
+function time(at?:string|null) {
+ if(!at||!Number.isFinite(Date.parse(at)))return 'Not observed';
+ return new Intl.DateTimeFormat('en-SG',{timeZone:'Asia/Singapore',month:'short',day:'numeric',hour:'2-digit',minute:'2-digit',hour12:false}).format(new Date(at))+' SGT';
 }
-export default function Workflow({states,onSelect}:{states:AgentState[];onSelect:(id:AgentId)=>void}){
- const [nodes,setNodes,onNodesChange]=useNodesState(initialNodes);const [edges,setEdges,onEdgesChange]=useEdgesState(initialEdges);
- const [notice,setNotice]=useState('');const [editing,setEditing]=useState<string|null>(null);const [label,setLabel]=useState('');
- const rename=useCallback((id:string,nextLabel:string)=>{setEditing(id);setLabel(nextLabel);},[]);
- const actions=useMemo(()=>({open:onSelect,rename}),[onSelect,rename]);
- useEffect(()=>{try{
-  const restored=restoreLayout(JSON.parse(localStorage.getItem('ryan-flow-v2')||'null'));
-  if(restored){setNodes(restored.nodes);setEdges(restored.edges);}
- }catch{}},[setNodes,setEdges]);
- useEffect(()=>{setNodes(ns=>ns.map(n=>({...n,data:{...n.data,status:states.find(s=>s.id===n.data.agentId)?.status||'offline'}})));setEdges(es=>es.map(e=>({...e,animated:states.find(s=>e.source.startsWith(s.id))?.status==='working'})));},[states,setNodes,setEdges]);
- const connect=useCallback((connection:Connection)=>setEdges(es=>addEdge({...connection,style:{stroke:'#b3ad9c'}},es)),[setEdges]);
- function addStep(){const agentId=nodes.find(n=>n.selected)?.data.agentId||'scheduler';const i=agents.findIndex(a=>a.id===agentId);setNodes(ns=>[...ns,{id:`${agentId}-${Date.now()}`,type:'agent',position:{x:80,y:55+i*132},data:{label:'New step',agentId,index:i*3,status:states.find(s=>s.id===agentId)?.status||'idle'}}]);setNotice('Step added');}
- function save(){try{localStorage.setItem('ryan-flow-v2',JSON.stringify({version:4,nodes,edges}));setNotice('Map saved');}catch{setNotice('Could not save this map');}}
- return <section className="workflow-panel workflow-polished"><div className="workflow-toolbar"><span className="planning-chip" title="Editing this map does not run agents or change their instructions.">Planning map</span><div className="button-group"><button className="subtle-button" disabled={nodes.length>=60} onClick={addStep}><Plus size={15}/>Add step</button><button className="icon-button" title="Reset layout" aria-label="Reset workflow layout" onClick={()=>{setNodes(initialNodes);setEdges(initialEdges);try{localStorage.removeItem('ryan-flow-v2');}catch{}setNotice('Layout reset');}}><RotateCcw size={16}/></button><button className="subtle-button" onClick={save}><Save size={15}/>Save</button></div></div>
-  <Actions.Provider value={actions}><div className="flow-canvas"><ReactFlow nodes={nodes} edges={edges} onNodesChange={onNodesChange} onEdgesChange={onEdgesChange} onConnect={connect} nodeTypes={nodeTypes} onNodeDoubleClick={(_,node)=>rename(node.id,node.data.label)} fitView fitViewOptions={{padding:.1}} minZoom={.3} maxZoom={1.8} zoomOnDoubleClick={false} deleteKeyCode={['Backspace','Delete']}><Background gap={22} size={1} color="#64717c"/><Controls/><MiniMap nodeColor={node=>agents.find(a=>a.id===node.data.agentId)?.color||'#aaa'} maskColor="rgba(17,21,26,.55)"/></ReactFlow></div></Actions.Provider>
-  {notice&&<div className="workflow-notice" role="status"><Check size={13}/>{notice}<button aria-label="Dismiss map notification" onClick={()=>setNotice('')}><X size={13}/></button></div>}
-  {editing&&<div className="modal-scrim"><form className="dialog workflow-rename" role="dialog" aria-modal="true" aria-label="Rename workflow step" onKeyDown={e=>{if(e.key==='Escape'){e.stopPropagation();setEditing(null);}}} onSubmit={e=>{e.preventDefault();if(label.trim()){setNodes(ns=>ns.map(n=>n.id===editing?{...n,data:{...n.data,label:label.trim().slice(0,60)}}:n));setEditing(null);setNotice('Step renamed');}}}><h2>Rename step</h2><label>Step name<input autoFocus value={label} onChange={e=>setLabel(e.target.value)} maxLength={60}/></label><div className="button-group"><button type="button" className="subtle-button" onClick={()=>setEditing(null)}>Cancel</button><button className="primary-button">Save</button></div></form></div>}
+
+export default function Workflow({states,events=[],messages=[],online=false,demo=false,onSelect,onCreate}:Props) {
+ const [agentId,setAgentId]=useState<AgentId>('scheduler');
+ const [selectedStage,setSelectedStage]=useState<string|null>(null);
+ const [tab,setTab]=useState<'step'|'connections'|'history'>('step');
+ const [sketchbook,setSketchbook]=useState(false);
+ const [wide,setWide]=useState(false);
+ useEffect(()=>{const media=window.matchMedia('(min-width: 801px)');const update=()=>setWide(media.matches);update();media.addEventListener('change',update);return()=>media.removeEventListener('change',update);},[]);
+ const inspectorRef=useRef<HTMLElement>(null);
+ const agent=agents.find(a=>a.id===agentId)!;
+ const definition=workflowCatalog[agentId];
+ const stage=definition.stages.find(s=>s.id===selectedStage)||definition.stages[0];
+ const state=states.find(s=>s.id===agentId);
+ const status=online?state?.status||'offline':'offline';
+ const connectors=[...new Set(definition.stages.map(s=>s.connector).filter(Boolean))] as IntegrationName[];
+ const history=[...events.filter(e=>e.agentId===agentId).map(e=>({id:`event-${e.id}`,at:e.at,label:e.label,detail:'Observed activity'})),...messages.filter(m=>m.agentId===agentId).map(m=>{const at=m.status==='replied'?m.repliedAt:m.status==='delivered'?m.deliveredAt:m.status==='queued'?m.queuedAt:m.status==='planning'?m.pickedUpAt:undefined;return {id:`message-${m.id}`,at:at||m.createdAt,label:receiptNames[m.status]||'Request status unknown',detail:at?'Prompt receipt':'Request created'};})].sort((a,b)=>Date.parse(b.at)-Date.parse(a.at)).slice(0,20);
+ const {nodes,edges}=useMemo(()=>{
+  const inspect=(id:string)=>{setSelectedStage(id);setTab('step');};
+  const nodes:Node<StageData>[]=definition.stages.map((s,i)=>{
+   const row=Math.floor(i/3),reverse=row%2===1,col=reverse?2-i%3:i%3;
+   const incoming=i>0&&i%3===0?Position.Top:reverse?Position.Right:Position.Left;
+   const outgoing=i%3===2?Position.Bottom:reverse?Position.Left:Position.Right;
+   return {id:s.id,type:'stage',initialWidth:206,initialHeight:126,position:{x:col*306,y:row*190},data:{stage:s,color:agent.color,incoming,outgoing,inspect},selected:s.id===stage.id,draggable:false};
+  });
+  let routes=definition.stages.slice(1).map((s,i)=>({source:definition.stages[i].id,target:s.id,label:''}));
+  if(agentId==='scheduler') {
+   const positions:Record<string,{x:number;y:number}>={'scheduler-trigger':{x:0,y:190},'scheduler-read':{x:276,y:190},'scheduler-exclusions':{x:552,y:0},'scheduler-availability':{x:552,y:190},'scheduler-book':{x:828,y:190},'scheduler-attention':{x:552,y:380},'scheduler-output':{x:1104,y:190}};
+   nodes.forEach(n=>{n.position=positions[n.id];n.data.incoming=Position.Left;n.data.outgoing=Position.Right;});
+   routes=[['scheduler-trigger','scheduler-read',''],['scheduler-read','scheduler-exclusions','Opt-out'],['scheduler-read','scheduler-availability','Scheduling'],['scheduler-read','scheduler-attention','Meeting change'],['scheduler-availability','scheduler-book','Eligible'],['scheduler-exclusions','scheduler-output',''],['scheduler-book','scheduler-output',''],['scheduler-attention','scheduler-output','Unresolved alerts']].map(([source,target,label])=>({source,target,label}));
+  }
+  if(agentId==='manager'){routes=routes.map(r=>r.target==='manager-plan'?{...r,label:'Requested work'}:r);routes.push({source:'manager-context',target:'manager-output',label:'Status only'});}
+  if(agentId==='proposal') {
+   routes=routes.map(r=>r.target==='proposal-output'?{...r,label:'Export requested'}:r);
+   routes.push({source:'proposal-review',target:'proposal-template',label:'Refine same draft'});
+  }
+  const edges:Edge[]=routes.map(r=>({...r,
+   ...(r.source==='scheduler-exclusions'&&r.target==='scheduler-output'?{targetHandle:'top'}:{}),
+   ...(r.source==='scheduler-attention'&&r.target==='scheduler-output'?{targetHandle:'bottom'}:{}),
+   ...(r.source==='proposal-review'&&r.target==='proposal-template'?{sourceHandle:'refine',targetHandle:'refine'}:{}),
+   ...(r.source==='manager-context'&&r.target==='manager-output'?{sourceHandle:'summary',targetHandle:'summary'}:{}),
+   id:`${r.source}-${r.target}`,type:'smoothstep',animated:false,markerEnd:{type:MarkerType.ArrowClosed,color:agent.color,width:14,height:14},style:{stroke:agent.color,strokeWidth:1.5,opacity:.7},labelStyle:{fill:'#d4e0e7',fontSize:10},labelBgStyle:{fill:'#20313d',fillOpacity:.95},labelBgPadding:[6,4],labelBgBorderRadius:4}));
+  return {nodes,edges};
+ },[definition,agent.color,stage.id,agentId]);
+ function selectAgent(id:AgentId){setAgentId(id);setSelectedStage(null);setTab('step');}
+
+ if(sketchbook)return <section className={styles.sketchbook}><div className={styles.sketchHeader}><button onClick={()=>setSketchbook(false)}><ArrowLeft size={16}/>Agent workflows</button><span>Sketchbook · saved planning map</span></div><PlanningMap states={states} onSelect={onSelect}/></section>;
+ return <section className={styles.workspace} aria-label="Agent workflows" style={{'--flow-accent':agent.color} as CSSProperties}>
+  <nav className={styles.roster} aria-label="Workflow agents">
+   <div className={styles.rosterTitle}><GitBranch size={16}/><span>Your agency</span></div>
+   <div className={styles.agentList}>{agents.map(a=>{
+    const s=online?states.find(s=>s.id===a.id)?.status||'offline':'offline';
+    return <button key={a.id} className={`${styles.agent} ${a.id===agentId?styles.activeAgent:''}`} onClick={()=>selectAgent(a.id)} aria-pressed={a.id===agentId} style={{'--flow-accent':a.color} as CSSProperties}><span className={styles.avatar}><Ryan agentId={a.id} size={42} still/></span><span><strong>{a.name.replace(' Ryan','')}</strong><small>{stateNames[s]}</small></span><i className={styles[s]} aria-hidden="true"/></button>;
+   })}</div>
+   <div className={styles.rosterActions}>{onCreate&&<button className={styles.create} onClick={onCreate}><Plus size={16}/>Add agent</button>}<button onClick={()=>setSketchbook(true)}><GitBranch size={14}/>Sketchbook</button></div>
+  </nav>
+  <div className={styles.content}>
+   <header className={styles.header}><div><h3>{agent.name}</h3><p>{definition.intent}</p></div><button className={styles.chat} onClick={()=>onSelect(agentId)}><MessageSquare size={15}/><span>Chat</span></button></header>
+   <div className={styles.runtime}><span className={`${styles.status} ${styles[status]}`}>{demo?'Demo · ':''}{stateNames[status]}</span><span className={styles.progress}>{online&&status==='working'?(state?.progress||state?.activity||'Working in Codex'):online&&status==='error'?'Check the original chat for the error.':online&&status==='waiting'?'Check the latest context in chat.':status==='offline'?'Agent activity unavailable':online?'Ready for the next task':'Live activity unavailable'}</span><span className={styles.observed}>{time(state?.updatedAt)}</span></div>
+   <div className={styles.workArea}>
+    <div className={styles.graphArea}>
+     <div className={styles.graphLabel}><span>Workflow guide</span><span>{definition.stages.length} steps</span></div>
+     <div className={styles.mobileSteps} aria-label="Workflow steps">{routeHints[agentId]&&<p className={styles.routeHint}>{routeHints[agentId]}</p>}{definition.stages.map((item,i)=><button key={item.id} aria-pressed={stage.id===item.id} onClick={()=>{setSelectedStage(item.id);setTab('step');inspectorRef.current?.scrollIntoView({block:'start'});}}><span>{i+1}</span>{item.connector&&<IntegrationLogo name={item.connector} size={21} decorative/>}<strong>{item.label}</strong><small>{item.kind==='review'?'Review gate':capabilityNames[item.capability]}</small><ArrowUpRight size={13}/></button>)}</div>
+     <div className={styles.canvas}>{wide&&<ReactFlow key={agentId} nodes={nodes} edges={edges} nodeTypes={nodeTypes} nodesDraggable={false} nodesConnectable={false} edgesFocusable={false} deleteKeyCode={null} fitView fitViewOptions={{padding:'5%',maxZoom:1}} minZoom={.35} maxZoom={1.5} zoomOnDoubleClick={false} onNodeClick={(_,node)=>{setSelectedStage(node.id);setTab('step');}}><Background gap={22} size={1} color="#52616c"/><Controls showInteractive={false}/></ReactFlow>}</div>
+     <p className={styles.graphNote}><Info size={13}/>Activity is reported per agent. Individual steps are not tracked.</p>
+    </div>
+    <aside ref={inspectorRef} className={styles.inspector} aria-label={`${agent.name} workflow details`}>
+     <div className={styles.tabs} aria-label="Workflow details">{(['step','connections','history'] as const).map(t=><button key={t} aria-pressed={tab===t} onClick={()=>setTab(t)}>{t==='step'?'Step':t==='connections'?'Connections':'History'}</button>)}</div>
+     <div className={styles.inspectorBody}>
+      {tab==='step'&&<><span className={styles.detailKind}>{stage.kind==='review'?'Review gate':stage.kind}</span><h4>{stage.label}</h4><p>{stage.detail}</p><span className={styles.detailBadge}>{capabilityNames[stage.capability]}</span><dl><dt>Input</dt><dd>{stage.inputs.join(' · ')}</dd><dt>Output</dt><dd>{stage.outputs.join(' · ')}</dd>{stage.reviewGate&&<><dt><ShieldCheck size={13}/>Review gate</dt><dd>{stage.reviewGate}</dd></>}</dl><details className={styles.details}><summary>Workflow scope</summary><p><strong>Starts with</strong><br/>{definition.trigger}</p><p><strong>Produces</strong><br/>{definition.outputs.join(' · ')}</p>{definition.limitations.map(l=><p key={l}>{l}</p>)}<small>Source review: {definition.lastVerified}</small></details></>}
+      {tab==='connections'&&<><h4>Tools & account scope</h4><p>{definition.accountScope}</p><div className={styles.connectorList}>{connectors.map(c=><div className={styles.connector} key={c}><IntegrationLogo name={c} size={25} decorative/><div><strong>{integrationMeta[c].label}</strong><small>{c==='codex'?'Existing agent chat':c==='studio'?'Local application · this Mac':'Access managed in Codex'}</small></div><a href={c==='codex'?`codex://threads/${agent.thread}`:integrationMeta[c].href} aria-label={`Open ${integrationMeta[c].label}`} target={c==='codex'?undefined:'_blank'} rel="noopener noreferrer"><ArrowUpRight size={16}/></a></div>)}</div><p className={styles.scopeNote}>Logos identify tools. This dashboard cannot verify account permissions or connection health.</p>{definition.limitations.map(l=><p className={styles.limit} key={l}>{l}</p>)}<details className={styles.details}><summary>Source references</summary>{definition.evidence.map(e=><p key={e.source}><strong>{e.label}</strong><br/><span className={styles.source}>{e.source}</span></p>)}<small>Reviewed {definition.lastVerified}</small></details></>}
+      {tab==='history'&&<><h4><History size={16}/>Recent activity</h4><p>Bridge events and prompt receipts{demo?' from the demo':''}.</p>{!online&&<p className={styles.scopeNote}>The bridge is offline. Saved events may be out of date.</p>}{history.length?<ol className={styles.history}>{history.map(e=><li key={e.id}><strong>{e.label}</strong><span>{e.detail}</span><time>{time(e.at)}</time></li>)}</ol>:<p className={styles.empty}>No activity recorded yet. Open the agent’s chat to start a task.</p>}{state?.result&&<details className={styles.details}><summary>Latest response</summary><MessageContent text={state.result}/></details>}<button className={styles.openChat} onClick={()=>onSelect(agentId)}>Open {agent.name} chat<ArrowUpRight size={15}/></button></>}
+     </div>
+    </aside>
+   </div>
+  </div>
  </section>;
 }

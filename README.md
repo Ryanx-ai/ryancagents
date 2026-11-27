@@ -6,7 +6,7 @@ A full-screen, playable-feeling office for Ryan’s Codex agents. Built with Nex
 
 - **Inbox Ryan** — incoming email and calendar scheduling.
 - **Outreach Ryan** — outbound campaigns.
-- **Network Ryan** — contact research, contact maps and GoHighLevel.
+- **Network Ryan** — contact research, deduplication and Contact Map rows for Ryan’s review. GoHighLevel sync is not verified in this dashboard.
 - **Proposal Ryan** — creates, edits and maintains proposals in the existing Proposal Agent chat and local Proposal Studio.
 - **Manager Ryan** — black suit, white polo; summarizes reported work and delegates requested tasks to the appropriate existing Codex chats.
 - **Designer Ryan** — glasses, brown overshirt and ivory tee; design and development in this dashboard’s original Codex chat.
@@ -17,7 +17,9 @@ Click a Ryan to open their chat. Idle Ryans wander; working Ryans return to thei
 
 Activity, workflow map, reviews and settings live behind floating icon buttons. The stats sheet opens to pending reviews, attention items, and shortcuts for services, agents, workflows, and activity. Each completion can be marked done independently; a Done tab keeps acknowledged items accessible. Current results include their own email, calendar, and document links. Older completion details open in the original Codex chat. Agent replies render readable Markdown with safe links; workflow steps display local service logos. Demo mode is opt-in, visibly labelled, and cannot dispatch real work. Pause affects animation only. The office pans horizontally on narrow screens; avatar shortcuts select the appropriate Ryan.
 
-The workflow map is an editable **planning map**, not an execution engine. Editing nodes does not change Codex instructions. Chat prompts, including Manager assignments, are the execution entry point. Activity reflects observed Codex turns and tool categories, not independently verified email delivery or CRM outcomes.
+**Workflows** opens an agent roster, a documented process map and an inspector for step inputs/outputs, review gates, tool/account scope and recent bridge activity. Inbox triage branches by request type; Manager status questions can bypass delegation; Proposal follows meeting notes → saved editable draft → review/refinement → explicitly requested PDF. The map identifies where work happens, without claiming per-step execution or connector health. On phones the process appears as readable step cards. Your previous editable map remains in **Sketchbook**, using the same saved browser data. Chat prompts, including Manager assignments, remain the execution entry point. See [workflow evidence and limits](docs/workflow-capabilities.md).
+
+The **+** in the loadout opens **Create a Ryan**: describe the task, edit the trigger/inputs/steps/output and requested connectors, choose an existing outfit and name, then review and save an inactive draft. Drafts can be reopened, edited and exported/imported as JSON. They are stored only in this browser; they do not add office seats or register live workers. AI generation, connector verification and activation are explicitly unavailable. No new polling, model calls, account grants or customer sends occur. The [agent-creation contract](docs/agent-creation-contract.md) defines the requirements for a future authorized backend.
 
 ## Prompt and manager behavior
 
