@@ -1,0 +1,36 @@
+.nameRow {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.infoButton {
+  display: grid;
+  place-items: center;
+  flex: 0 0 28px;
+  width: 28px;
+  height: 28px;
+  margin: -5px 0;
+  padding: 0;
+  border-radius: 50%;
+  color: #d2cbbd;
+}
+
+.infoButton:hover {
+  background: rgb(241 223 188 / 12%);
+  color: #ffe6b8;
+}
+
+.addAgent:disabled {
+  opacity: 1;
+  border-style: dashed;
+  border-color: rgb(239 224 196 / 30%);
+  background: rgb(18 27 37 / 24%);
+  color: #c4bba9;
+}
+
+@media (max-width: 380px) and (max-height: 660px) {
+  .loadout:global(.hud-bottom) {
+    flex-direction: column;
+  }
+}

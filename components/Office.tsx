@@ -3,6 +3,7 @@ import {useEffect,useRef,useState} from 'react';
 import {agents,emptyAgents,type AgentState,type AgentId,type Status} from '../lib/model';
 import {avatarMode,needsReview,nextCompletionCue,ambientStep,activityBubble} from '../lib/game-state.mjs';
 import {getOfficeTime} from '../lib/office-time.mjs';
+import styles from './Office.module.css';
 
 const places:Record<AgentId,{home:number;floor:'upstairs'|'downstairs'}>={
  scheduler:{home:19,floor:'downstairs'},outreach:{home:39,floor:'downstairs'},contacts:{home:59,floor:'downstairs'},
@@ -66,11 +67,11 @@ function Bookcase({x,y}:{x:number;y:number}) {
  return <g transform={`translate(${x} ${y})`}><rect x="-27" width="58" height="112" fill="#705b49"/><rect x="-22" y="5" width="48" height="102" fill="#3a3432"/>{[0,1,2].map(i=><g key={i} transform={`translate(0 ${i*34})`}><rect x="-22" y="33" width="48" height="4" fill="#8c7054"/>{[0,1,2,3,4].map(j=><rect key={j} x={-18+j*8} y={9+(j%2)*4} width="6" height={24-(j%2)*4} fill={['#959b87','#a27761','#747b90','#b6a47d','#6c8980'][j]}/>)}</g>)}</g>;
 }
 
-function Actor({agent,index,state,mode,pendingReview,online,selected,onSelect,paused}:{agent:typeof agents[number];index:number;state:AgentState;mode:string;pendingReview:boolean;online:boolean;selected:boolean;onSelect:()=>void;paused:boolean}) {
+function Actor({agent,index,state,mode,pendingReview,online,selected,onSelect,onProfile,paused}:{agent:typeof agents[number];index:number;state:AgentState;mode:string;pendingReview:boolean;online:boolean;selected:boolean;onSelect:()=>void;onProfile:()=>void;paused:boolean}) {
  const {home,floor}=places[agent.id];
  const [x,setX]=useState(home);const [ambient,setAmbient]=useState('idle');
  const [walkDuration,setWalkDuration]=useState(4200);
- const position=useRef(home);const sequence=useRef(0);const actor=useRef<HTMLButtonElement>(null);
+ const position=useRef(home);const sequence=useRef(0);const actor=useRef<HTMLDivElement>(null);
  const [cue,setCue]=useState<{seen:string|null;until:number}>();
  useEffect(()=>{if(online)setCue(previous=>nextCompletionCue(previous,state.completedAt,Date.now()));},[state.completedAt,online]);
  useEffect(()=>{if(!cue?.until)return;const timer=setTimeout(()=>setCue(previous=>previous?{...previous,until:0}:previous),Math.max(0,cue.until-Date.now()));return()=>clearTimeout(timer);},[cue?.until]);
@@ -91,16 +92,17 @@ function Actor({agent,index,state,mode,pendingReview,online,selected,onSelect,pa
  },[visualMode,home,index,paused,selected]);
  const pose=celebrating?'celebrate':mode==='attention'?'attention':mode==='working'?'working':ambient;
  const bubble=activityBubble(state,online);
- return <button ref={actor} className={`world-ryan ${floor} ${agent.id} ${visualMode} ${mode==='review'&&!celebrating?'settled-review':''} ${selected?'selected':''}`} style={{left:`${x}%`,'--agent-color':agent.color,'--walk-duration':`${walkDuration}ms`,'--sprite-duration':pose==='idle'?'2.4s':pose.startsWith('walk')?'.85s':'1.2s'} as React.CSSProperties} onClick={onSelect} aria-label={`Talk to ${agent.name}${mode==='attention'?', needs attention':pendingReview?', ready for review':''}`} data-pose={pose} data-floor={floor}>
+ return <div ref={actor} className={`world-ryan ${styles.actor} ${floor} ${agent.id} ${visualMode} ${mode==='review'&&!celebrating?'settled-review':''} ${selected?'selected':''}`} style={{left:`${x}%`,'--agent-color':agent.color,'--walk-duration':`${walkDuration}ms`,'--sprite-duration':pose==='idle'?'2.4s':pose.startsWith('walk')?'.85s':'1.2s'} as React.CSSProperties} role="group" aria-label={agent.name} data-pose={pose} data-floor={floor}>
+  <button type="button" className={styles.chatHit} onClick={onSelect} aria-label={`Talk to ${agent.name}${mode==='attention'?', needs attention':pendingReview?', ready for review':''}`}/>
   {mode==='attention'&&<span className="attention-marker" aria-label="Needs attention">!</span>}
   {celebrating&&<><span className="yay-marker">yay!</span><span className="confetti" aria-hidden="true">{Array.from({length:8},(_,i)=><i key={i} style={{'--i':i} as React.CSSProperties}/>)}</span></>}
   {pendingReview&&!celebrating&&mode!=='attention'&&mode!=='working'&&<span className="review-marker" aria-label="Ready for review">★</span>}
   {bubble&&<span className="thought-bubble" role="status"><span className="bubble-label">Activity</span><span className="bubble-text">{bubble}</span></span>}
   <span className="sprite-shadow"/><Ryan status={state.status} size={112} pose={pose} still={paused} agentId={agent.id}/>
-  <span className="actor-name"><i/>{agent.name}</span>
- </button>;
+  <span className={`actor-name ${styles.nameplate}`}><i aria-hidden="true"/><span>{agent.name}</span><button type="button" className={styles.profileButton} onClick={onProfile} aria-label={`View ${agent.name} profile`} aria-haspopup="dialog" title={`View ${agent.name} profile`}><span aria-hidden="true">i</span></button></span>
+ </div>;
 }
-export default function Office({states,selected,onSelect,night,onNightChange,paused,reviewed,online=true}:{states:AgentState[];selected:AgentId|null;onSelect:(id:AgentId)=>void;night:boolean;onNightChange:(night:boolean)=>void;paused:boolean;reviewed:Record<string,string>;online?:boolean}) {
+export default function Office({states,selected,onSelect,onProfile,night,onNightChange,paused,reviewed,online=true}:{states:AgentState[];selected:AgentId|null;onSelect:(id:AgentId)=>void;onProfile:(id:AgentId)=>void;night:boolean;onNightChange:(night:boolean)=>void;paused:boolean;reviewed:Record<string,string>;online?:boolean}) {
  const camera=useRef<HTMLDivElement>(null);
  useEffect(()=>{if(selected&&camera.current){const el=camera.current;el.scrollTo({left:el.scrollWidth*places[selected].home/100-el.clientWidth/2,behavior:window.matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});}},[selected]);
  const working=(id:AgentId)=>states.find(s=>s.id===id)?.status==='working';
@@ -138,7 +140,7 @@ export default function Office({states,selected,onSelect,night,onNightChange,pau
    <g transform="translate(925 683)"><rect x="-36" y="0" width="78" height="65" rx="3" fill="#62574e"/><rect x="-33" y="4" width="72" height="13" fill="#b3a18b"/><path d="M-31 31H37M-31 49H37" stroke="#39352f" strokeWidth="3"/><path d="M-4 23H11M-4 41H11M-4 59H11" stroke="#b6a48b" strokeWidth="2"/><rect x="-18" y="-36" width="35" height="35" rx="3" fill="#242d32"/><rect x="-13" y="-31" width="25" height="12" fill="#5c6f6d"/><rect x="-9" y="-12" width="18" height="10" fill="#d0bfa1"/></g>
    <Plant x={1030} y={735} scale={1.15}/><Plant x={61} y={747} scale={.85}/>
   </svg>
-  {agents.map((agent,index)=>{const state=states.find(a=>a.id===agent.id)||emptyAgents.find(a=>a.id===agent.id)!;return <Actor key={agent.id} agent={agent} index={index} state={state} mode={avatarMode(state,reviewed,online)} pendingReview={needsReview(state,reviewed)} online={online} selected={selected===agent.id} onSelect={()=>onSelect(agent.id)} paused={paused}/>;})}
+  {agents.map((agent,index)=>{const state=states.find(a=>a.id===agent.id)||emptyAgents.find(a=>a.id===agent.id)!;return <Actor key={agent.id} agent={agent} index={index} state={state} mode={avatarMode(state,reviewed,online)} pendingReview={needsReview(state,reviewed)} online={online} selected={selected===agent.id} onSelect={()=>onSelect(agent.id)} onProfile={()=>onProfile(agent.id)} paused={paused}/>;})}
   <div className="world-vignette"/>
  </div></div>;
 }

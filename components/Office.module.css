@@ -1,0 +1,69 @@
+.actor {
+  --profile-target: 32px;
+}
+
+/* Keep the sprite and position measurements on the original world actor. The
+   transparent chat hit area is a sibling of the independent profile button. */
+.chatHit {
+  position: absolute;
+  inset: 0 0 calc(-1 * var(--profile-target) - 5px);
+  z-index: 3;
+  padding: 0;
+  border-radius: 9px;
+}
+
+.actor > :global(.attention-marker),
+.actor > :global(.review-marker),
+.actor > :global(.yay-marker),
+.actor > :global(.thought-bubble) {
+  pointer-events: none;
+}
+
+.actor .nameplate:global(.actor-name) {
+  min-height: var(--profile-target);
+  padding: 0 2px 0 8px;
+  gap: 5px;
+  z-index: 4;
+  pointer-events: none;
+}
+
+.profileButton {
+  display: inline-grid;
+  place-items: center;
+  width: var(--profile-target);
+  min-height: var(--profile-target);
+  padding: 0;
+  margin-left: 1px;
+  flex: 0 0 var(--profile-target);
+  border-radius: 5px;
+  color: #f2ead9;
+  pointer-events: auto;
+}
+
+.profileButton > span {
+  display: grid;
+  place-items: center;
+  width: 16px;
+  height: 16px;
+  border: 1px solid currentColor;
+  border-radius: 50%;
+  font-family: Georgia, serif;
+  font-weight: 700;
+  font-size: 12px;
+  line-height: 1;
+}
+
+.profileButton:hover,
+.profileButton:focus-visible {
+  color: var(--agent-color);
+  background: rgb(237 231 211 / 12%);
+}
+
+.actor:focus-within .nameplate {
+  border-color: var(--agent-color);
+  color: var(--agent-color);
+}
+
+@media (pointer: coarse) {
+  .actor { --profile-target: 44px; }
+}

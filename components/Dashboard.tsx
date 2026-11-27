@@ -1,8 +1,10 @@
 'use client';
 import {useEffect,useState,useCallback,useRef} from 'react';
 import dynamic from 'next/dynamic';
-import {Activity,GitBranch,SlidersHorizontal,Sun,Moon,Pause,Play,LockKeyhole,X,Send,Check,ArrowUpRight,BarChart3,Radio,Maximize,Minimize,Gamepad2,RefreshCw,Search,LogOut} from 'lucide-react';
+import {Activity,GitBranch,SlidersHorizontal,Sun,Moon,Pause,Play,LockKeyhole,X,Send,Check,ArrowUpRight,BarChart3,Radio,Maximize,Minimize,Gamepad2,RefreshCw,Search,LogOut,Info,Plus} from 'lucide-react';
 import Office,{Ryan} from './Office';
+import CharacterCard from './CharacterCard';
+import profileStyles from './DashboardProfiles.module.css';
 import MessageContent from './MessageContent';
 import ReviewSheet from './ReviewSheet';
 import {completionKey,completionRows} from '../lib/completions.mjs';
@@ -37,6 +39,7 @@ export default function Dashboard(){
  const [connection,setConnection]=useState('locked');
  const [serviceError,setServiceError]=useState('');
  const [selected,setSelected]=useState<AgentId|null>(null);
+ const [profile,setProfile]=useState<AgentId|null>(null);
  const [panel,setPanel]=useState<Panel>(null);
  const [night,setNight]=useState(true);
  const [paused,setPaused]=useState(false);
@@ -67,7 +70,7 @@ export default function Dashboard(){
  const [query,setQuery]=useState('');
  const [fullscreen,setFullscreen]=useState(false);
  const messageRequest=useRef<{id:string;agentId:AgentId;prompt:string}|null>(null);
- const lockOffice=useCallback(()=>{authEpoch.current++;tokenRef.current=null;etags.current.clear();refreshFailures.current=0;messageFailures.current=0;setServiceError('');setSending(false);setUnlocking(false);setSessionToken(null);setConnection('locked');setSnapshot(null);setMessages([]);setReviewed({});setCompleted({});setDemoCompleted({});setReviewing({});setDrafts({});setSelected(null);setPanel(null);setDemo(false);setAccessKey('');setPersonalKey('');messageRequest.current=null;},[]);
+ const lockOffice=useCallback(()=>{authEpoch.current++;tokenRef.current=null;etags.current.clear();refreshFailures.current=0;messageFailures.current=0;setServiceError('');setSending(false);setUnlocking(false);setSessionToken(null);setConnection('locked');setSnapshot(null);setMessages([]);setReviewed({});setCompleted({});setDemoCompleted({});setReviewing({});setDrafts({});setSelected(null);setProfile(null);setPanel(null);setDemo(false);setAccessKey('');setPersonalKey('');messageRequest.current=null;},[]);
  const request=useCallback(async(url:string,init:RequestInit={})=>{
   const token=tokenRef.current;if(!token)throw new Error('Unlock the office first.');
   const isRead=!init.method||init.method==='GET';const cached=isRead?etags.current.get(url):null;
@@ -120,6 +123,7 @@ export default function Dashboard(){
  const reviews=demo?demoReviewed:reviewed;
  const completions=demo?demoCompleted:completed;
  const chosen=agents.find(a=>a.id===selected);
+ const profileAgent=agents.find(a=>a.id===profile);
  const state=states.find(a=>a.id===selected);
  const mode=state?avatarMode(state,reviews,online):'idle';
  const attention=states.filter(a=>avatarMode(a,reviews,online)==='attention').length;
@@ -145,12 +149,12 @@ export default function Dashboard(){
  }
  async function toggleFullscreen(){try{if(document.fullscreenElement)await document.exitFullscreen();else await document.documentElement.requestFullscreen();}catch{setError('Fullscreen is unavailable in this browser.');}}
  return <div className={`game-shell ${unlock?'office-locked':''}`}><div className="office-stage" inert={unlock} aria-hidden={unlock?true:undefined}>
-  <Office states={states} selected={selected} onSelect={choose} night={night} onNightChange={setNight} paused={paused||unlock} reviewed={reviews} online={online}/>
+  <Office states={states} selected={selected} onSelect={choose} onProfile={setProfile} night={night} onNightChange={setNight} paused={paused||unlock||!!profile} reviewed={reviews} online={online}/>
   <div className="hud-top-left"><button className="hq-badge" onClick={()=>{setSelected(null);setPanel(null);}} aria-label="Office"><span>r.</span><strong>HQ</strong></button>{demo&&<button className="demo-badge" onClick={()=>setDemo(false)}>Demo <X size={12}/></button>}</div>
   <div className="hud-top-right"><button className={`signal-badge ${online?'connected':''}`} title={connection==='locked'?'Unlock office':online?'Bridge connected':serviceError||'Bridge offline'} onClick={()=>openPanel('settings')}><i/>{connection==='locked'&&!demo?<LockKeyhole size={13}/>:<Radio size={14}/>}</button><span className="hud-button" role="img" aria-label={night?'Nighttime, Singapore time':'Daytime, Singapore time'} title={night?'Night · 7pm–7am SGT':'Day · 7am–7pm SGT'}>{night?<Moon size={18}/>:<Sun size={18}/>}</span><Button label={fullscreen?'Exit fullscreen':'Fullscreen'} onClick={()=>void toggleFullscreen()}>{fullscreen?<Minimize size={17}/>:<Maximize size={17}/>}</Button></div>
-  <div className="hud-bottom"><div className="agent-switcher">{agents.map(a=>{const s=states.find(s=>s.id===a.id)!;const m=avatarMode(s,reviews,online);return <button key={a.id} title={a.name} aria-label={`Select ${a.name}`} className={`avatar-shortcut ${selected===a.id?'active':''}`} onClick={()=>choose(a.id)} style={{'--agent-color':a.color} as React.CSSProperties}><Ryan size={54} still agentId={a.id}/><span className="shortcut-status">{m==='attention'?'!':needsReview(s,reviews)?'★':m==='working'?'•':''}</span></button>;})}</div><div className="hud-dock"><Button label="Activity" active={panel==='activity'} badge={attention+celebrations} onClick={()=>openPanel('activity')}><Activity size={19}/></Button><Button label="Workflows" active={panel==='workflow'} onClick={()=>openPanel('workflow')}><GitBranch size={19}/></Button><Button label="Stats" badge={toReview} active={panel==='stats'} onClick={()=>openPanel('stats')}><BarChart3 size={19}/></Button><span className="dock-divider"/><Button label={paused?'Resume animations':'Pause animations'} active={paused} onClick={()=>setPaused(v=>!v)}>{paused?<Play size={17}/>:<Pause size={17}/>}</Button><Button label="Settings" active={panel==='settings'} onClick={()=>openPanel('settings')}><SlidersHorizontal size={19}/></Button></div></div>
+  <div className={`hud-bottom ${profileStyles.loadout}`}><div className="agent-switcher">{agents.map(a=>{const s=states.find(s=>s.id===a.id)!;const m=avatarMode(s,reviews,online);return <button key={a.id} title={a.name} aria-label={`Select ${a.name}`} className={`avatar-shortcut ${selected===a.id?'active':''}`} onClick={()=>choose(a.id)} style={{'--agent-color':a.color} as React.CSSProperties}><Ryan size={54} still agentId={a.id}/><span className="shortcut-status">{m==='attention'?'!':needsReview(s,reviews)?'★':m==='working'?'•':''}</span></button>;})}<button type="button" className={`avatar-shortcut ${profileStyles.addAgent}`} aria-label="Add agent (coming soon)" title="Add agent — coming soon" disabled><Plus size={21} strokeWidth={1.5} aria-hidden="true"/></button></div><div className="hud-dock"><Button label="Activity" active={panel==='activity'} badge={attention+celebrations} onClick={()=>openPanel('activity')}><Activity size={19}/></Button><Button label="Workflows" active={panel==='workflow'} onClick={()=>openPanel('workflow')}><GitBranch size={19}/></Button><Button label="Stats" badge={toReview} active={panel==='stats'} onClick={()=>openPanel('stats')}><BarChart3 size={19}/></Button><span className="dock-divider"/><Button label={paused?'Resume animations':'Pause animations'} active={paused} onClick={()=>setPaused(v=>!v)}>{paused?<Play size={17}/>:<Pause size={17}/>}</Button><Button label="Settings" active={panel==='settings'} onClick={()=>openPanel('settings')}><SlidersHorizontal size={19}/></Button></div></div>
   {chosen&&state&&<section className="floating-panel chat-panel" role="dialog" aria-label={`Chat with ${chosen.name}`}>
-   <header className="panel-header"><div className="chat-avatar" style={{'--agent-color':chosen.color} as React.CSSProperties}><Ryan size={54} still agentId={chosen.id}/></div><div><h2>{chosen.name}</h2><span className={`compact-status ${mode}`}>{!online?'Offline':mode==='review'?'Ready for review':mode==='attention'?'Needs attention':mode==='working'?'Working':'Idle'}</span></div>{chosen.thread&&<a className="hud-button" href={`codex://threads/${chosen.thread}`} aria-label="Open original Codex chat" title="Open in Codex"><ArrowUpRight size={17}/></a>}<button className="hud-button" onClick={()=>setSelected(null)} aria-label="Close chat"><X size={18}/></button></header>
+   <header className="panel-header"><div className="chat-avatar" style={{'--agent-color':chosen.color} as React.CSSProperties}><Ryan size={54} still agentId={chosen.id}/></div><div><div className={profileStyles.nameRow}><h2>{chosen.name}</h2><button type="button" className={profileStyles.infoButton} onClick={()=>setProfile(chosen.id)} aria-label={`View ${chosen.name} profile`} title="Character profile" aria-haspopup="dialog"><Info size={15} aria-hidden="true"/></button></div><span className={`compact-status ${mode}`}>{!online?'Offline':mode==='review'?'Ready for review':mode==='attention'?'Needs attention':mode==='working'?'Working':'Idle'}</span></div>{chosen.thread&&<a className="hud-button" href={`codex://threads/${chosen.thread}`} aria-label="Open original Codex chat" title="Open in Codex"><ArrowUpRight size={17}/></a>}<button className="hud-button" onClick={()=>setSelected(null)} aria-label="Close chat"><X size={18}/></button></header>
    <div className="chat-history">
     {state.result&&<article className={`agent-result ${pendingReview?'unreviewed':''}`}><div className="message-label"><span>{mode==='attention'?'!':pendingReview?'★':'✦'}</span><span>{chosen.name}</span><time>{relative(state.completedAt||state.updatedAt,now)}</time></div><MessageContent text={state.result}/>{pendingReview?<button className="review-button" disabled={!!reviewing[completionKey(state.id,state.completedAt)||'']} onClick={()=>void review()}><Check size={16}/>Mark done</button>:state.completedAt&&<span className="done-receipt"><Check size={14}/>Done</span>}</article>}
     {!state.result&&!currentMessages.length&&<div className="chat-empty"><Ryan status={state.status} size={106} agentId={chosen.id}/></div>}
@@ -169,6 +173,7 @@ export default function Dashboard(){
   </section>}
   {error&&!selected&&!unlock&&<button className="toast" onClick={()=>setError('')}>{error}<X size={14}/></button>}
   </div>
+  {!unlock&&profileAgent&&<CharacterCard agent={profileAgent} onClose={()=>setProfile(null)}/>}
   {unlock&&<div className="modal-scrim"><form className="unlock-dialog" role="dialog" aria-modal="true" aria-label="Unlock office" autoComplete="off" onSubmit={login}><header><LockKeyhole size={22}/><h2>Unlock office</h2></header><label>Office access key<input type="password" autoComplete="new-password" name="office-access" value={accessKey} onChange={e=>setAccessKey(e.target.value)} autoFocus required/></label><label>Personal access key<input type="password" autoComplete="new-password" name="personal-access" value={personalKey} onChange={e=>setPersonalKey(e.target.value)} required/></label><p className="unlock-protection"><LockKeyhole size={12}/>Bot-protected access</p>{error&&<p className="inline-error" role="alert">{error}</p>}<button className="primary-button" disabled={unlocking}>{unlocking?'Checking…':'Unlock'}<ArrowUpRight size={16}/></button></form></div>}
 
  </div>;
