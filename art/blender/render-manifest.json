@@ -1,0 +1,28 @@
+{
+  "renderer": "Blender 4.5.17 LTS / Cycles CPU",
+  "logicalSize": [
+    1100,
+    800
+  ],
+  "renderSize": [
+    2200,
+    1600
+  ],
+  "spriteLayers": "Runtime only; never baked into renders",
+  "plates": [
+    {
+      "mode": "day",
+      "file": "ryan-hq-day.webp",
+      "bytes": 140828,
+      "sha256": "5b31133a580fa706b34d740829caa4438d754c188385df3ece0dd891ab219db6",
+      "sourceSha256": "bceb1d3d48ecb1438cdb229a9937e9e0dd1bf75ca822ca9fb10dff4a203c2e8a"
+    },
+    {
+      "mode": "night",
+      "file": "ryan-hq-night.webp",
+      "bytes": 148760,
+      "sha256": "d1fff7cd401dca6c78eb19a2ade04efaccf1b6c69f45c21eaa6b6519c98d8195",
+      "sourceSha256": "05f34d4af40a5802f2dc47735bfcb7efbe32c5c457be32e0db6213dbe490bc1e"
+    }
+  ]
+}

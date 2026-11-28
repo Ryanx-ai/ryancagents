@@ -1,3 +1,8 @@
+.scene {
+  pointer-events: none;
+  user-select: none;
+}
+
 .actor {
   --profile-target: 32px;
 }
