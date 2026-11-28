@@ -10,7 +10,7 @@ import {boardNotesForView} from '../lib/board-view';
 import profileStyles from './DashboardProfiles.module.css';
 import MessageContent from './MessageContent';
 import ManagerResources from './ManagerResources';
-import IntegrationLogo,{integrationMeta} from './IntegrationLogo';
+import StudioLaunchControl from './StudioLaunchControl';
 import ReviewSheet from './ReviewSheet';
 import {completionKey,completionRows,completionOwnsLatestResult} from '../lib/completions.mjs';
 import {clearSubmittedDraft} from '../lib/chat-drafts.mjs';
@@ -110,6 +110,13 @@ function OfficeDashboard(){
   return r;
  },[lockOffice]);
  const boardDay=now?new Date(now+8*60*60*1000).toISOString().slice(0,10):'';
+ const studioRequest=useCallback(async(url:string,init:RequestInit={})=>{
+  const epoch=authEpoch.current;const response=await request(url,init);const body=await response.text();
+  if(authEpoch.current!==epoch||!tokenRef.current)throw new Error('Session ended.');
+  return new Response(body,{status:response.status,statusText:response.statusText,headers:response.headers});
+ },[request]);
+ const studioEpoch=authEpoch.current;
+ const studioAuthorized=()=>!!tokenRef.current&&tokenRef.current===sessionToken&&authEpoch.current===studioEpoch&&!demo;
  const board=useBlackboard(demo?null:sessionToken,boardDay,request);
  const todayNotes=board.data?boardNotesForView({...board.data,day:boardDay},'today'):[];
  function openBoard(){setSelected(null);setPanel(null);setBoardOpen(true);void board.refresh(false);}
@@ -194,8 +201,8 @@ function OfficeDashboard(){
   <div className={`hud-bottom ${profileStyles.loadout}`}><div className="agent-switcher">{agents.map(a=>{const s=states.find(s=>s.id===a.id)!;const m=avatarMode(s,reviews,online);return <button key={a.id} title={a.name} aria-label={`Select ${a.name}`} className={`avatar-shortcut ${selected===a.id?'active':''}`} onClick={()=>choose(a.id)} style={{'--agent-color':a.color} as React.CSSProperties}><Ryan size={54} still agentId={a.id}/><span className="shortcut-status">{m==='attention'?'!':needsReview(s,reviews)?'★':m==='working'?'•':''}</span></button>;})}<button type="button" className={`avatar-shortcut ${profileStyles.addAgent}`} aria-label="Create agent" title="Create agent" onClick={()=>setCreatingAgent(true)}><Plus size={21} strokeWidth={1.5} aria-hidden="true"/></button></div><div className="hud-dock"><Button label="Activity" active={panel==='activity'} badge={attention+celebrations} onClick={()=>openPanel('activity')}><Activity size={19}/></Button><Button label="Workflows" active={panel==='workflow'} onClick={()=>openPanel('workflow')}><GitBranch size={19}/></Button><Button label="Stats" badge={toReview} active={panel==='stats'} onClick={()=>openPanel('stats')}><BarChart3 size={19}/></Button><Button label="Blackboard" active={boardOpen} onClick={openBoard}><ClipboardList size={19}/></Button><span className="dock-divider"/><Button label={paused?'Resume animations':'Pause animations'} active={paused} onClick={()=>setPaused(v=>!v)}>{paused?<Play size={17}/>:<Pause size={17}/>}</Button><Button label="Settings" active={panel==='settings'} onClick={()=>openPanel('settings')}><SlidersHorizontal size={19}/></Button></div></div>
   {chosen&&state&&<section ref={chatRef} className="floating-panel chat-panel" role="dialog" aria-label={`Chat with ${chosen.name}`}>
    <header className="panel-header"><div className="chat-avatar" style={{'--agent-color':chosen.color} as React.CSSProperties}><Ryan size={54} still agentId={chosen.id}/></div><div><div className={profileStyles.nameRow}><h2>{chosen.name}</h2><button type="button" className={profileStyles.infoButton} onClick={()=>setProfile(chosen.id)} aria-label={`View ${chosen.name} profile`} title="Character profile" aria-haspopup="dialog"><Info size={15} aria-hidden="true"/></button></div><span className={`compact-status ${mode}`}>{!online||mode==='offline'?'Offline':mode==='review'?'Ready for review':mode==='attention'?'Needs attention':mode==='working'?'Working':'Idle'}</span></div>{chosen.thread&&<a className="hud-button" href={`codex://threads/${chosen.thread}`} aria-label="Open original Codex chat" title="Open in Codex"><ArrowUpRight size={17}/></a>}<button className="hud-button" onClick={()=>setSelected(null)} aria-label="Close chat"><X size={18}/></button></header>
-   {chosen.id==='manager'&&<ManagerResources/>}
-   {chosen.id==='proposal'&&<a className={profileStyles.studioLink} href={integrationMeta.studio.href} target="_blank" rel="noopener noreferrer" title="Open Proposal Studio on this Mac"><IntegrationLogo name="studio" size={23} decorative/><span>Open Studio</span><ArrowUpRight size={18} aria-hidden="true"/></a>}
+   {chosen.id==='manager'&&<ManagerResources request={studioRequest} disabled={demo||unlock} isAuthorized={studioAuthorized}/>}
+   {chosen.id==='proposal'&&<StudioLaunchControl request={studioRequest} disabled={demo||unlock} isAuthorized={studioAuthorized}/>}
    <div className="chat-history">
     {(result||pendingReview)&&<article className={`agent-result ${pendingReview&&resultIsCompletion?'unreviewed':''}`}><div className="message-label"><span>{mode==='attention'?'!':pendingReview?'★':'✦'}</span><span>{chosen.name}</span><time>{relative(resultIsCompletion?state.completedAt:state.attentionAt||state.updatedAt,now)}</time></div><MessageContent text={result||'This task finished without a text summary. Open the original Codex chat to review it.'}/>{pendingReview&&resultIsCompletion?<button className="review-button" disabled={!!reviewing[completionKey(state.id,state.completedAt)||'']} onClick={()=>void review()}><Check size={16}/>Mark done</button>:resultIsCompletion?<span className="done-receipt"><Check size={14}/>Done</span>:pendingReview?<button className="settings-action" onClick={()=>openPanel('stats')}>Review completed tasks<ArrowUpRight size={14}/></button>:null}</article>}
     {!result&&!pendingReview&&!currentMessages.length&&<div className="chat-empty"><Ryan status={state.status} size={106} agentId={chosen.id}/></div>}

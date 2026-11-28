@@ -1,0 +1,13 @@
+export type StudioLaunchReason='other-device'|'not-configured'|'not-installed'|'port-in-use'|'start-failed'|'start-timeout'|'unsupported-platform'|'local-unreachable'|'authorization'|'verification-failed'|'timeout'|'unavailable';
+export type StudioLaunchPhase='idle'|'checking'|'launching'|'verifying'|'ready'|'unavailable';
+export type StudioLaunchState={phase:StudioLaunchPhase;reason:StudioLaunchReason|null;opened:boolean};
+export type StudioRequest=(url:string,init?:RequestInit)=>Promise<Response>;
+export type StudioPendingWindow={navigate:(url:string)=>boolean;close:()=>void};
+export type StudioLaunchController={start:(options?:{isMac?:boolean})=>Promise<void>;cancel:()=>void;dispose:()=>void;getState:()=>StudioLaunchState};
+export const STUDIO_URL:'http://127.0.0.1:4174';
+export const STUDIO_LAUNCH_URL:'http://127.0.0.1:4175/studio/launch';
+export const STUDIO_LAUNCH_TIMEOUT:number;
+export const STUDIO_LAUNCH_MESSAGES:Readonly<Record<StudioLaunchReason,string>>;
+export function isMacDeviceHint(device?:{platform?:string;userAgent?:string;maxTouchPoints?:number}):boolean;
+export function launchProposalStudio(options:{request:StudioRequest;localFetch?:StudioRequest;signal?:AbortSignal;onPhase?:(phase:StudioLaunchPhase)=>void;timeoutMs?:number}):Promise<{status:'ready';url:typeof STUDIO_URL}|{status:'unavailable';reason:StudioLaunchReason}>;
+export function createStudioLaunchController(options:{request:StudioRequest;localFetch?:StudioRequest;onChange?:(state:StudioLaunchState)=>void;openWindow?:()=>StudioPendingWindow|null;timeoutMs?:number}):StudioLaunchController;

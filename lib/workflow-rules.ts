@@ -158,7 +158,7 @@ export const workflowRules: Record<AgentId, WorkflowRule[]> = {
       hold:'Export was not requested or the print layout overflows. This is a workflow review rule, not a server review lock; exporting never authorizes sending.',
       stageIds:['proposal-review','proposal-output'], source:proposal},
     {id:'proposal-local-boundary', title:'Keep Studio local and the handoff scoped', kind:'scope',
-      requirement:'Use the existing Proposal chat and local Studio runtime. A dashboard link opens the running editor; the drafting message format is not an HTTP endpoint or cloud AI connection.',
+      requirement:'Use the existing Proposal chat and local Studio runtime. The explicit dashboard launch action verifies the paired Mac before opening Studio; the drafting message format is not an HTTP endpoint or cloud AI connection.',
       hold:'Studio is unavailable or access would require weakening local origin checks. No automatic email, WhatsApp, enrolment or external send.',
       stageIds:['proposal-trigger','proposal-template','proposal-save','proposal-output'], source:proposal},
   ],

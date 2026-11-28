@@ -194,7 +194,7 @@ export const workflowCatalog: Record<AgentId, WorkflowDefinition> = {
     accountScope: 'The existing Proposal Agent chat and local Studio drafts/templates on this Mac. No cloud document account is connected by this map.',
     lastVerified: '2026-11-27',
     limitations: [
-      'Studio is local to this Mac and must be running. A web link opens it but cannot run its desktop launcher.',
+      'Studio stays local to the paired Mac. Launch Studio can start it after login through a verified local bridge; other devices use the manual fallback.',
       'Codex-assisted drafting is operational without an API key. The optional in-app AI generation connection is not verified and is not this workflow.',
       'The PDF review gate is an agent/user workflow rule, not a server lock. No automatic email, WhatsApp, enrolment or external send.',
     ],

@@ -70,8 +70,8 @@ async function readAgent(agent){
   return {id:agent.id,status:old&&state.status==='working'?'waiting':state.status,activity:old&&state.status==='working'?LABELS.waiting:state.activity,updatedAt:state.last,completedAt:state.completedAt||null,attentionAt:state.attentionAt||null,result:state.result||null,progress};
  }catch{ return {id:agent.id,status:'offline',activity:LABELS.idle,updatedAt:null,progress:null}; }
 }
-let stopping=false;
-for(const signal of ['SIGINT','SIGTERM'])process.on(signal,()=>{stopping=true;});
+let stopping=false,studioLauncher=null;
+for(const signal of ['SIGINT','SIGTERM'])process.on(signal,()=>{stopping=true;studioLauncher?.close();studioLauncher?.closeAllConnections?.();});
 await mkdir(path.join(root,'.local'),{recursive:true});
 let lastPublished=0,lastFingerprint='',publishing=null;
 const ingestBackoff=new RequestBackoff();
@@ -107,6 +107,15 @@ async function loop(task,interval){
 }
 // Observe local logs every second and publish changes immediately; unchanged
 // snapshots keep a sixty-second heartbeat. Prompt pickup never waits for ingest.
+// This optional listener accepts only signed, user-clicked Studio launch tickets.
+// It is never started by dry-run/one-shot checks and adds no polling or uploads.
+if(config.studio&&!process.argv.includes('--dry-run')&&!process.argv.includes('--once')){
+ try{
+  const {startStudioLauncher}=await import('./studio-launcher.mjs');
+  studioLauncher=await startStudioLauncher({bridgeKey:config.bridgeKey,installationId:config.studio.installationId,studioDirectory:config.studio.studioDirectory,origins:config.studio.origins,port:4175,nodePath:process.execPath});
+  console.log('Local Proposal Studio launcher is available.');
+ }catch{console.error('Local Proposal Studio launcher unavailable. The office bridge will continue; use the manual Studio launcher.');}
+}
 await safely(()=>tick(true));
 if(process.argv.includes('--dry-run'))process.exit(0);
 if(process.argv.includes('--once'))await safely(()=>relay.tick());

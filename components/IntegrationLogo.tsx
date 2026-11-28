@@ -9,7 +9,7 @@ export const integrationMeta:Record<IntegrationName,{label:string;href:string;sr
  contacts:{label:'Google Contacts',href:'https://contacts.google.com/',src:'/assets/integrations/contacts.png'},
  sheets:{label:'Google Sheets',href:'https://sheets.google.com/',src:'/assets/integrations/sheets.svg'},
  gohighlevel:{label:'GoHighLevel',href:'https://app.gohighlevel.com/',src:'/assets/integrations/gohighlevel.png'},
- studio:{label:'Proposal Studio · this Mac',href:'http://127.0.0.1:4174',src:'/assets/integrations/proposal-studio.svg'},
+ studio:{label:'Proposal Studio · local app',href:'http://127.0.0.1:4174',src:'/assets/integrations/proposal-studio.svg'},
  codex:{label:'Codex',href:'https://chatgpt.com/codex',src:'/assets/integrations/codex.svg'},
 };
 export default function IntegrationLogo({name,size=22,className='',decorative=false}:{name:IntegrationName;size?:number;className?:string;decorative?:boolean}){

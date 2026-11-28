@@ -1,0 +1,14 @@
+export const STUDIO_URL:'http://127.0.0.1:4174';
+export const LAUNCHER_URL:'http://127.0.0.1:4175/studio/launch';
+export const STUDIO_TICKET_TTL:number;
+export const STUDIO_HQ_ORIGINS:readonly string[];
+export type StudioFailureReason='not-configured'|'not-installed'|'port-in-use'|'start-failed'|'start-timeout'|'unsupported-platform';
+export const STUDIO_FAILURE_REASONS:readonly StudioFailureReason[];
+export type StudioTicket={version:1;action:'launch-proposal-studio';origin:string;installationId:string;nonce:string;iat:number;exp:number};
+export type StudioReceiptInput={status:'ready'}|{status:'unavailable';reason:StudioFailureReason};
+export type StudioResult={status:'ready';url:typeof STUDIO_URL}|{status:'unavailable';reason:StudioFailureReason};
+export function allowedStudioOrigin(origin:unknown,development?:boolean):boolean;
+export function issueStudioTicket(key:string,origin:string,installationId:string,now?:number):string;
+export function verifyStudioTicket(ticket:unknown,key:string,origin:string,installationId:string,now?:number):StudioTicket|null;
+export function createStudioReceipt(ticket:string,key:string,result:StudioReceiptInput,now?:number):string;
+export function verifyStudioReceipt(ticket:unknown,receipt:unknown,key:string,origin:string,now?:number):StudioResult|null;
