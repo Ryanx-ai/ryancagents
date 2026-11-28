@@ -20,11 +20,12 @@ async function acquire(){
 }
 let lock;
 try{
- const size=(await stat(inputPath)).size;if(size>256000)throw new Error('Calendar display input is too large.');
+ const size=(await stat(inputPath)).size;if(size>750000)throw new Error('Calendar display input is too large.');
  let parsed;try{parsed=JSON.parse(await readFile(inputPath,'utf8'));}catch{throw new Error('Calendar display input could not be read.');}
  const input=validateCalendarSnapshot(parsed,scope);
  await chmod(inputPath,0o600);
- if(process.argv.includes('--dry-run')){console.log(JSON.stringify({valid:true,day:input.day,status:input.status||'ok',events:input.events?.length||0}));process.exit(0);}
+ const coverage={rangeStart:input.rangeStart??input.day,rangeEnd:input.rangeEnd??input.day};
+ if(process.argv.includes('--dry-run')){console.log(JSON.stringify({valid:true,version:input.version,day:input.day,...coverage,status:input.status||'ok',events:input.events?.length||0}));process.exit(0);}
  lock=await acquire();if(!lock){console.log(JSON.stringify({published:false,reason:'publisher-busy'}));process.exit(0);}
  const state=await journal(),decision=boardPublishDecision(input,state);
  if(!decision.publish){console.log(JSON.stringify({published:false,reason:decision.reason,day:input.day}));}
@@ -39,7 +40,7 @@ try{
   if(!response.ok){await atomic(journalPath,boardPublishFailure(state,response.status,response.headers.get('retry-after')));throw new Error(`Board publishing failed (HTTP ${response.status}). No source event was changed.`);}
   const receipt=await response.json().catch(()=>null);if(receipt?.ok!==true){await atomic(journalPath,boardPublishFailure(state));throw new Error('Board publish receipt was unreadable.');}
   await atomic(journalPath,{fingerprint:decision.fingerprint,publishedAt:Date.now(),failures:0,retryAt:0});
-  console.log(JSON.stringify({published:true,day:input.day,status:input.status||'ok',events:input.events?.length||0}));
+  console.log(JSON.stringify({published:true,version:input.version,day:input.day,...coverage,status:input.status||'ok',events:input.events?.length||0}));
  }
 }catch(error){console.error(error instanceof Error?error.message:'Board publishing failed.');process.exitCode=1;}
 finally{if(lock){await lock.close();await unlink(lockPath).catch(()=>{});}}

@@ -3,15 +3,15 @@ import {useCallback,useEffect,useRef,useState} from 'react';
 import type {BoardResponse,BoardNote,BoardNoteDraft,BoardUpdate} from '../lib/board.mjs';
 
 type Request=(url:string,init?:RequestInit)=>Promise<Response>;
-export function useBlackboard(session:string|null,day:string,request:Request){
+export function useBlackboard(session:string|null,day:string,request:Request,open=false){
  const [data,setData]=useState<BoardResponse|null>(null),[loading,setLoading]=useState(false),[error,setError]=useState<string|null>(null);
  const [busyIds,setBusyIds]=useState<ReadonlySet<string>>(new Set());
  const active=useRef(session),activeDay=useRef(day),refreshCurrent=useRef<()=>Promise<void>>(async()=>{}),etag=useRef(''),sequence=useRef(0),lastRead=useRef(0),busy=useRef(new Set<string>());
  active.current=session;activeDay.current=day;
  const refresh=useCallback(async(force=true)=>{
   if(!session||active.current!==session||!day)return;
-  if(!force&&Date.now()-lastRead.current<10000)return;
-  lastRead.current=Date.now();const run=++sequence.current;setLoading(true);
+  if(!force&&performance.now()-lastRead.current<10000)return;
+  lastRead.current=performance.now();const run=++sequence.current;setLoading(true);
   try{
    const response=await request(`/api/board?day=${encodeURIComponent(day)}`,{cache:'no-store',headers:etag.current?{'If-None-Match':etag.current}:{}});
    const body=response.status===304?null:await response.json();
@@ -28,6 +28,15 @@ export function useBlackboard(session:string|null,day:string,request:Request){
   void refresh();const visible=()=>{if(!document.hidden)void refresh(false);};
   document.addEventListener('visibilitychange',visible);return()=>{document.removeEventListener('visibilitychange',visible);sequence.current++;};
  },[session,day,refresh]);
+ useEffect(()=>{
+  if(!session||!open)return;
+  let stopped=false,timer:ReturnType<typeof setTimeout>;
+  const schedule=()=>{clearTimeout(timer);if(!stopped&&!document.hidden)timer=setTimeout(tick,120000);};
+  const tick=async()=>{if(stopped||document.hidden)return;try{await refresh(false);}finally{schedule();}};
+  const visible=()=>{if(document.hidden)clearTimeout(timer);else schedule();};
+  schedule();document.addEventListener('visibilitychange',visible);
+  return()=>{stopped=true;clearTimeout(timer);document.removeEventListener('visibilitychange',visible);};
+ },[session,open,refresh]);
  async function mutate(method:'POST'|'PATCH',input:BoardNoteDraft|BoardUpdate):Promise<BoardNote>{
   if(!session||active.current!==session)throw new Error('Unlock the office first.');
   if(busy.current.has(input.id))throw new Error('This note is still saving.');

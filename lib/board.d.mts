@@ -5,13 +5,15 @@ export type BoardNote={id:string;source:'manual'|'calendar';date:string;title:st
 export type BoardNoteDraft={id:string;date:string;title:string;body:string;color:BoardColor};
 export type BoardPatch={title?:string;body?:string;color?:BoardColor;date?:string;done?:boolean};
 export type BoardUpdate={id:string;version:number;patch:BoardPatch};
-export type BoardCalendarState={status:'unconfigured'|'waiting'|'current'|'stale'|'error';observedAt:string|null;lastAttemptAt:string|null;day:string|null;reason?:'unavailable'|'authentication'|'partial'};
+export type BoardCalendarState={status:'unconfigured'|'waiting'|'current'|'stale'|'error';observedAt:string|null;lastAttemptAt:string|null;day:string|null;rangeStart?:string|null;rangeEnd?:string|null;reason?:'unavailable'|'authentication'|'partial'};
 export type BoardResponse={version:1;day:string;timeZone:'Asia/Singapore';notes:BoardNote[];calendar:BoardCalendarState};
 export type BoardScope={accountId:string;calendarId:string};
 export const BOARD_PATH:string;
 export const BOARD_COLORS:readonly BoardColor[];
+export const BOARD_CALENDAR_DAYS:14;
 export function singaporeDay(now?:number):string;
 export function validDay(value:unknown):boolean;
+export function calendarSnapshotRange(day?:string):{rangeStart:string;rangeEnd:string};
 export function newBoardState():any;
 export function checkedBoardState(value:unknown):any;
 export function boardView(state:any,day?:string,now?:number,configured?:boolean):BoardResponse;

@@ -1,0 +1,12 @@
+.root{position:relative;display:flex;}
+.trigger{position:relative;display:grid;place-items:center;width:40px;height:40px;border:1px solid var(--glass-edge);border-radius:8px;background:var(--glass-hud);color:#e3e7dd;backdrop-filter:blur(14px) saturate(125%);box-shadow:0 8px 24px #08101933,inset 0 1px 0 var(--glass-highlight);}
+.trigger:hover,.trigger[aria-expanded=true]{border-color:#efc88e;color:#efc88e;}
+.mode{position:absolute;right:3px;bottom:2px;font-size:7px;line-height:1;color:#c7bdac;}
+.popover{position:absolute;right:0;top:calc(100% + 9px);width:222px;padding:14px;border:1px solid var(--glass-edge);border-radius:10px;background:var(--glass-surface);backdrop-filter:blur(18px);box-shadow:0 12px 35px #060e1855;}
+.popover strong{display:block;margin-bottom:11px;font-size:13px;font-weight:500;}
+.popover small{display:block;margin-top:11px;color:#b4bdbd;font-size:10px;}
+.options{display:flex;gap:4px;padding:3px;border:1px solid #e2dcc32b;border-radius:8px;background:#101c2255;}
+.options button{display:flex;align-items:center;justify-content:center;gap:5px;min-height:34px;flex:1;padding:7px 8px;border-radius:5px;font-size:11px;color:#bdc5c2;}
+.options button[aria-pressed=true]{background:#efc88e;color:#332e26;box-shadow:0 1px 4px #0002;}
+.options button:hover:not([aria-pressed=true]){background:#dcd4be19;color:#faf0dc;}
+@media(max-width:800px){.trigger{width:36px;height:36px;}}

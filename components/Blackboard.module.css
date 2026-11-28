@@ -11,6 +11,12 @@
 .iconButton:hover:not(:disabled) { background: #cee0e415; color: #f7e7c6; }
 .newButton { display: flex; align-items: center; justify-content: center; gap: 7px; min-height: 39px; padding: 9px 13px; color: #2d373b; background: #e7c58e; border: 1px solid #f0d3a2; border-radius: 7px; font-size: 12px; font-weight: 600; }
 .newButton:hover:not(:disabled) { background: #f1d5a3; }
+.views { display: flex; gap: 19px; flex-shrink: 0; padding: 0 26px; margin-bottom: 13px; border-bottom: 1px solid #bccbd220; }
+.views button { display: flex; align-items: center; gap: 7px; min-height: 42px; padding: 8px 2px 12px; border-bottom: 2px solid transparent; color: #9fb3ba; font-size: 12px; }
+.views button[aria-selected='true'] { color: #edcf9d; border-bottom-color: #d9bb83; }
+.views button:hover:not(:disabled) { color: #f0dcb6; }
+.calendarHint { color: #a9b9bf; font-size: 11px; line-height: 1.5; }
+.calendarPane { min-width: 0; min-height: 0; overflow: auto; padding: 5px; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: #7f939854 transparent; container: board-calendar / inline-size; }
 .toolbar { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 0 26px 16px; flex-shrink: 0; border-bottom: 1px solid #bccbd220; }
 .filters { display: flex; align-items: center; gap: 5px; }
 .filters button { display: flex; align-items: center; justify-content: center; gap: 9px; min-height: 36px; padding: 8px 13px; border: 1px solid transparent; border-radius: 6px; font-size: 12px; color: #b9c8cc; }
@@ -41,6 +47,7 @@
 .doneButton { display: inline-flex; justify-content: center; align-items: center; gap: 5px; padding: 7px 8px; min-height: 29px; color: #354238; background: #fffbed2e; border: 1px solid #58644826; border-radius: 4px; font-size: 10px; }
 .doneButton:hover:not(:disabled) { color: #192a22; border-color: #58644866; background: #fffbed66; }
 .doneButton:focus-visible { outline-color: #233c4a; }
+.doneButton[aria-disabled='true'], .saveButton[aria-disabled='true'] { opacity: .55; cursor: wait; }
 .done { filter: saturate(.62); }
 .done .noteContent h3 { text-decoration: line-through; text-decoration-color: #4f5b4677; }
 .empty { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 300px; height: 100%; padding: 30px 14px; color: #cbd7c4; text-align: center; }
@@ -133,11 +140,15 @@
  .newButton svg { width: 14px; }
  .headerActions .iconButton { width: 34px; height: 37px; }
  .toolbar { padding: 0 17px 13px; gap: 10px; }
+ .views { padding-inline: 17px; gap: 21px; margin-bottom: 10px; }
+ .views button { min-height: 42px; padding-bottom: 10px; }
+ .calendarToolbar { padding-bottom: 9px; }
  .filters { gap: 2px; }
  .filters button { font-size: 11px; padding: 8px 10px; gap: 6px; }
  .toolbar .iconButton { width: 34px; height: 34px; }
  .workspace, .withEditor { grid-template-columns: minmax(0, 1fr); padding: 12px; gap: 0; }
  .withEditor .board { display: none; }
+ .withEditor .calendarPane { display: none; }
  .board { padding: 20px 16px; border-width: 6px; }
  .notes, .withEditor .notes { grid-template-columns: minmax(0, 1fr); gap: 19px; }
  .note { rotate: none!important; }

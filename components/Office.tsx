@@ -32,14 +32,15 @@ function DigitalClock({onNightChange}:{onNightChange:(night:boolean)=>void}) {
   let timer:ReturnType<typeof setTimeout>;
   const tick=()=>{
    clearTimeout(timer);
-   const current=getOfficeTime();
+   const currentNow=Date.now(),current=getOfficeTime(currentNow);
    setTime(current.time);
    if(lastNight.current!==current.night){lastNight.current=current.night;onNightChange(current.night);}
-   if(document.visibilityState==='visible')timer=setTimeout(tick,1000-Date.now()%1000);
+   if(document.visibilityState==='visible')timer=setTimeout(tick,1000-Math.floor(currentNow)%1000);
   };
   const onVisibility=()=>{if(document.visibilityState==='visible')tick();else clearTimeout(timer);};
-  tick();document.addEventListener('visibilitychange',onVisibility);
-  return()=>{clearTimeout(timer);document.removeEventListener('visibilitychange',onVisibility);};
+  tick();
+  document.addEventListener('visibilitychange',onVisibility);window.addEventListener('focus',tick);window.addEventListener('pageshow',tick);
+  return()=>{clearTimeout(timer);document.removeEventListener('visibilitychange',onVisibility);window.removeEventListener('focus',tick);window.removeEventListener('pageshow',tick);};
  },[onNightChange]);
  return <g className="office-clock" transform="translate(513 170)" role="img" aria-label={`Singapore time ${time}`} aria-live="off">
   <rect x="-73" y="-29" width="146" height="58" rx="4" fill="#75634f"/>
@@ -72,8 +73,9 @@ function Actor({agent,index,state,mode,pendingReview,online,selected,onSelect,on
   const reduced=window.matchMedia('(prefers-reduced-motion: reduce)');
   const stop=()=>{clearTimeout(timer);setAmbient('idle');};
   const freeze=()=>{const el=actor.current;if(el?.parentElement){const frozen=parseFloat(getComputedStyle(el).left)/el.parentElement.clientWidth*100;if(Number.isFinite(frozen)){setX(frozen);position.current=frozen;}}stop();};
+  if(paused){freeze();return;}
   if(!['idle','offline','review'].includes(visualMode)){setX(home);position.current=home;setAmbient('idle');return;}
-  if(paused||selected){freeze();return;}
+  if(selected){freeze();return;}
   const act=()=>{const next=ambientStep(index,sequence.current++,position.current);setWalkDuration(next.duration);setAmbient(next.pose);setX(next.x);position.current=next.x;timer=setTimeout(act,next.duration);};
   const motionChanged=()=>{freeze();if(!reduced.matches)act();};
   if(reduced.matches)freeze();else timer=setTimeout(act,200+index*450);

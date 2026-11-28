@@ -14,6 +14,14 @@ test('unchanged calendars publish at most hourly and changed calendars publish n
  assert.equal(boardPublishDecision(snapshot,journal,now+BOARD_CHECKIN_MS).publish,true);
  assert.equal(boardPublishDecision({...snapshot,events:[]},journal,now+1000).publish,true);
 });
+test('upgrading or advancing the declared horizon publishes even when the event list is unchanged',()=>{
+ const now=10000000,journal={fingerprint:calendarFingerprint(snapshot),publishedAt:now};
+ const horizon={...snapshot,version:2,rangeStart:'2026-11-27',rangeEnd:'2026-12-10'};
+ assert.equal(boardPublishDecision(horizon,journal,now+1000).reason,'changed');
+ const upgraded={fingerprint:calendarFingerprint(horizon),publishedAt:now};
+ assert.equal(boardPublishDecision({...horizon,observedAt:'2026-11-27T03:15:00Z',events:[...horizon.events].reverse()},upgraded,now+1000).reason,'unchanged');
+ assert.equal(boardPublishDecision({...horizon,day:'2026-11-28',rangeStart:'2026-11-28',rangeEnd:'2026-12-11'},upgraded,now+1000).reason,'changed');
+});
 test('publisher retries are bounded and respect authentication/429 backoff',()=>{
  const now=10000000;
  assert.equal(boardPublishFailure({},401,null,now).retryAt,now+3600000);

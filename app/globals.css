@@ -103,6 +103,8 @@
   background: rgb(7 18 30 / 28%);
   -webkit-backdrop-filter: blur(5px);
   backdrop-filter: blur(5px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 .flow-node {
   background: rgb(28 44 56 / 60%);
@@ -208,7 +210,7 @@
 .unlock-protection{display:flex;align-items:center;gap:7px;color:#c0cdd0;font-size:11px;margin:0 0 18px}
 .world-ryan.idle,.world-ryan.offline{transition:left var(--walk-duration,4.2s) linear}
 .compact-status.review{color:#e9c189}
-.unlock-dialog{width:min(370px,calc(100vw - 40px))}
+.unlock-dialog{width:min(370px,calc(100vw - 40px));max-height:calc(100vh - 40px);max-height:calc(100dvh - 40px);overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin}
 
 /* Two floors share a fixed-height camera; only the horizontal map can scroll. */
 .office-world--duplex {
@@ -278,3 +280,5 @@
 .office-clock-digits { font-family: 'SFMono-Regular', Consolas, monospace; font-size: 21px; font-variant-numeric: tabular-nums; letter-spacing: 1px; fill: #f0c68b; }
 .office-clock-zone { font-family: 'DM Sans', sans-serif; font-size: 8px; font-weight: 500; letter-spacing: 1.5px; fill: #bba684; }
 .office-sign-lettering { font-family: 'Space Grotesk', sans-serif; font-size: 14px; font-weight: 500; letter-spacing: .6px; fill: #e2c596; }
+
+@media (max-width:420px){.setting-row.lighting-setting{flex-direction:column;align-items:stretch;gap:12px}.lighting-setting>span{align-self:flex-start}}

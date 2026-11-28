@@ -4,9 +4,9 @@ The board stores manual post-it notes and a read-only copy of the configured wor
 
 ## Storage and cost
 
-Production uses one private Blob object, `office/board-v1.json`. It is created only by the first successful write. Initialization uses create-if-absent; later writes use strong ETag compare-and-swap. A losing first writer re-reads the known path and merges. Corrupt existing data fails closed. There are no Blob LIST operations, per-note objects or board polling loops.
+Production uses one private Blob object, `office/board-v1.json`. It is created only by the first successful write. Initialization uses create-if-absent; later writes use strong ETag compare-and-swap. A losing first writer re-reads the known path and merges. Corrupt existing data fails closed. There are no Blob LIST operations or per-note objects.
 
-Read on board open, explicit refresh or a relevant tab return. GET supports ETags/304; the representation includes the requested SGT day and a one-minute freshness bucket so an old 304 cannot preserve a stale “current” label indefinitely. Each read uses one known object path. Viewer responses remain authenticated and `private, no-store`; the client keeps its ETag only in the unlocked session.
+Read on unlock, board open, explicit refresh or a relevant tab return. While the board is open and the page is visible, refresh with a conditional GET every 120 seconds, reusing the current ETag. There are no interval reads when the board is closed or the page is hidden. These requests read the published board only; they do not poll Google Calendar or start another source worker. GET supports ETags/304; the representation includes the requested SGT day and a one-minute freshness bucket so an old 304 cannot preserve a stale “current” label indefinitely. Each read uses one known object path. Viewer responses remain authenticated and `private, no-store`; the client keeps its ETag only in the unlocked session.
 
 The board retains up to 200 manual notes. Open notes never expire. Completed manual notes older than 90 days are pruned on creation of another note; the limit otherwise produces an explicit capacity error. Create-ID idempotency applies while that note is retained. The current calendar snapshot contains at most 200 events. Removed calendar entries retain their board acknowledgement/version for up to 180 days, bounded to 2,000 entries; reaching that bound fails visibly rather than silently dropping acknowledgements.
 
@@ -16,7 +16,7 @@ For isolated local QA only, `OFFICE_BOARD_DEV_STORE=1` **and** `NODE_ENV=develop
 
 All viewer operations require the existing office session, issued after both access keys. Writes additionally require the same origin and BotID verification. No new credential is introduced.
 
-`GET /api/board?day=YYYY-MM-DD` defaults to today's `Asia/Singapore` date. It returns **all retained manual notes across dates**, plus the current calendar snapshot rows; the UI can filter Today/Open/Done. A note's `date` is not inferred from browser timezone.
+`GET /api/board?day=YYYY-MM-DD` defaults to today's `Asia/Singapore` date. It returns **all retained manual notes across dates**, plus the current calendar snapshot rows; the UI can filter Today/Open/Done and Calendar. The request date does not trigger an upstream Calendar fetch or expand the published range. A note's `date` is not inferred from browser timezone. A v2 calendar row uses its actual SGT start date (the source start date for all-day events), which can precede the range for an overlapping event. Filter calendar days by interval overlap, not only `note.date`; manual notes still use exact dates.
 
 ```ts
 type BoardResponse = {
@@ -28,11 +28,15 @@ type BoardResponse = {
     status: 'unconfigured' | 'waiting' | 'current' | 'stale' | 'error';
     observedAt: string | null; // last successfully published source check
     lastAttemptAt: string | null;
-    day: string | null;       // day covered by that successful snapshot
+    day: string | null;       // SGT observation day of the successful snapshot
+    rangeStart: string | null; // inclusive first covered SGT date
+    rangeEnd: string | null;   // inclusive last covered SGT date
     reason?: 'unavailable' | 'authentication' | 'partial';
   };
 };
 ```
+
+Coverage describes the last successful complete source read, including when its data is stale or a later read failed. Dates outside that range are **not synced**, rather than verified empty. Legacy one-day snapshots expose `rangeStart === rangeEnd === day`; missing source data exposes null coverage. The response and stored board remain version 1; only the publisher wire format advances to version 2. Shared type fields are optional for legacy client fixtures, but the server always emits coverage.
 
 `BoardNote` fields are `id`, `source` (`manual`/`calendar`), `date`, `title`, `body`, `color`, `done`, `version`, `createdAt`, `updatedAt`, and optional `calendar`. Colors: `yellow`, `peach`, `mint`, `blue`, `lavender`. Titles allow 1–160 characters; bodies 0–2,000. Dates must be valid ISO dates in 2000–2099. Shared types live in [`lib/board.d.mts`](../lib/board.d.mts).
 
@@ -46,15 +50,17 @@ Calendar `body` contains readable source description text, not generated meeting
 
 `PUT /api/board/calendar` accepts only the existing `OFFICE_BRIDGE_KEY` bearer credential. Viewer tokens are insufficient. The server uses its explicitly configured work account/calendar; optional `OFFICE_BOARD_CALENDAR_ACCOUNT` and `OFFICE_BOARD_CALENDAR_ID` override the server defaults. Both IDs must match exactly. Never substitute another account or a display title.
 
-Use the existing Inbox/Scheduler cycle to read the **whole SGT day**, finish all pages, then atomically write one ignored local snapshot for the publisher. There is no new worker or calendar mutation. The snapshot is authoritative only after every page succeeds. On partial coverage, publish an error instead of an incomplete event list.
+Use the existing Inbox/Scheduler cycle to read **today and the next 13 SGT dates**, finish all pages and required full event reads, then atomically write one ignored local snapshot for the publisher. `calendarSnapshotRange(day)` returns the inclusive `rangeStart`/`rangeEnd`; read the source over `[rangeStart 00:00 +08:00, day after rangeEnd 00:00 +08:00)`. There is no new worker or calendar mutation. Do not use the Scheduler's filtered attention subset as a complete board snapshot. On partial coverage, unavailable details, or more than 200 events, publish an error instead of an incomplete or truncated event list.
 
 Successful wire shape (replace the example date/times and account IDs with the actual check):
 
 ```json
 {
-  "version": 1,
+  "version": 2,
   "status": "ok",
   "day": "2026-11-27",
+  "rangeStart": "2026-11-27",
+  "rangeEnd": "2026-12-10",
   "timeZone": "Asia/Singapore",
   "accountId": "<configured work account ID>",
   "calendarId": "<configured work calendar ID>",
@@ -74,7 +80,9 @@ Successful wire shape (replace the example date/times and account IDs with the a
 }
 ```
 
-Optional `url` must be an HTTPS Google Calendar event link. Timed events need explicit timezone offsets; all-day events use ISO dates with an **exclusive** end date. Every active event must overlap the specified SGT day. Use each recurring occurrence's stable event ID, not its title or only its series ID. Identical titles do not identify events. An explicit cancelled record may be `{eventId, status:'cancelled'}`; absent/cancelled/moved-out events disappear when the next complete snapshot replaces the previous rows. Board acknowledgement flags remain keyed by account + calendar + event ID, so title changes and later reappearance do not reset them.
+Optional `url` must be an HTTPS Google Calendar event link. Timed events need explicit timezone offsets; all-day events use ISO dates with an **exclusive** end date. Every active event must overlap the declared 14-day SGT range. Include a multi-day event once, even if it overlaps several dates or began before the range. Use each recurring occurrence's stable event ID, not its title or only its series ID. Identical titles do not identify events. An explicit cancelled record may be `{eventId, status:'cancelled'}`; absent/cancelled/moved-out events disappear when the next complete snapshot replaces the previous rows. Board acknowledgement flags remain keyed by account + calendar + event ID, so title changes and later reappearance do not reset them. Advancing the daily range alone does not change an unchanged event's version or date.
+
+Legacy version 1 input remains valid without range fields and retains its original one-day semantics. After a source has published a version 2 horizon, a version 1 success is rejected with HTTP 409 `CALENDAR_RANGE_REQUIRED`, preventing an old in-flight cycle from erasing upcoming events. Legacy failure reports can still preserve the existing horizon. Existing stored boards are read without a migration write, and the first v2 snapshot preserves manual notes and stable acknowledgements.
 
 The optional wire `links` field maps to `calendar.links` in viewer notes. Invalid link arrays reject the snapshot rather than silently storing unsafe content. Duplicate normalized URLs are coalesced. These are display links, not instructions to fetch or invoke their destinations; booking/cancellation links can perform actions when deliberately opened by the user and must retain accurate source labels.
 
@@ -82,6 +90,6 @@ The optional wire `links` field maps to `calendar.links` in viewer notes. Invali
 
 `observedAt` must be timezone-qualified, at most two hours old or one minute ahead, and describe today's SGT day. An older observation than the latest persisted attempt is rejected. Different content at the same observation time is rejected. The pure `validateCalendarSnapshot(value, scope, now?)` export returns a normalized **wire-safe** snapshot; publishers may serialize that return value.
 
-For a failed read, send the same version/day/timezone/scope/observedAt fields with `status:'error'` and `reason:'unavailable'`, `'authentication'` or `'partial'`. Omit `events` and `complete`. Never upload raw exception logs or credentials. Error publication preserves the last successful event list and `observedAt`; `lastAttemptAt` identifies the failed check.
+For a failed read, send the same version/day/range/timezone/scope/observedAt fields with `status:'error'` and `reason:'unavailable'`, `'authentication'` or `'partial'`. Omit `events` and `complete`. Never upload raw exception logs or credentials. Error publication preserves the last successful event list, coverage and `observedAt`; `lastAttemptAt` identifies the failed check. An error before the first successful read has null successful coverage.
 
 Upload changed content immediately. Unchanged success/error publications are deduplicated for up to one hour; a freshness heartbeat after an hour updates the observation without resetting per-note versions or Done marks. The source becomes stale after 90 minutes without a successful published observation, or when its day is no longer today. A recorded failure is shown as an error. The publisher should keep its own last successful fingerprint and bounded retry policy, avoiding repeated uploads or retry loops when storage is unavailable. Maximum request body: 750 KB.

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {boardNotesForView,boardTodayOpen,boardMeetingLinks,boardCalendarLink,boardBaseAfterToggle,boardDraftFromNote,boardDraftChanged} from '../lib/board-view.ts';
+import {boardNotesForView,boardTodayOpen,boardMeetingLinks,boardCalendarLink,boardBaseAfterToggle,boardDraftFromNote,boardDraftChanged,boardCalendarNotes,boardCalendarCoverage,boardCalendarOverlaps,boardMonthDays,boardShiftMonth,boardShiftDay,boardNoteDateLabel} from '../lib/board-view.ts';
 
 const day='2026-11-27';
 function note(id,{start,allDay=false,done=false,date=day,...rest}={}){
@@ -74,4 +74,51 @@ test('Done advances the editor base only when it used that exact note version',(
  assert.equal(boardBaseAfterToggle(base,base,done),done,'a local Done needs no false conflict');
  assert.equal(boardBaseAfterToggle(base,note('other'),{...done,id:'other'}),base);
  assert.equal(boardBaseAfterToggle(null,base,done),null);
+});
+
+test('calendar view uses Singapore interval overlap and exclusive event end dates',()=>{
+ const overnight=note('overnight',{start:'2026-11-26T15:30:00Z',date:'2026-11-26'});
+ overnight.calendar.end='2026-11-26T17:00:00Z';
+ const endedAtMidnight=note('ended',{start:'2026-11-26T22:00:00+08:00',date:'2026-11-26'});
+ endedAtMidnight.calendar.end='2026-11-27T00:00:00+08:00';
+ const multiDay=note('multi-day',{start:'2026-11-26',date:'2026-11-26',allDay:true,done:true});
+ multiDay.calendar.end='2026-11-28';
+ const tomorrow=note('tomorrow',{start:'2026-11-28T01:00:00+08:00',date:'2026-11-28'});
+ tomorrow.calendar.end='2026-11-28T02:00:00+08:00';
+ const board=data([tomorrow,endedAtMidnight,overnight,multiDay,note('manual')]);
+ assert.equal(boardCalendarOverlaps(overnight,day),true,'UTC date is converted to the Singapore date');
+ assert.equal(boardCalendarOverlaps(endedAtMidnight,day),false);
+ assert.equal(boardCalendarOverlaps(multiDay,'2026-11-27'),true);
+ assert.equal(boardCalendarOverlaps(multiDay,'2026-11-28'),false,'all-day end is exclusive');
+ assert.equal(boardNoteDateLabel(multiDay),'Thu, 26 Nov – Fri, 27 Nov');
+ assert.equal(boardNoteDateLabel(overnight),'Thu, 26 Nov – Fri, 27 Nov');
+ assert.deepEqual(boardCalendarNotes(board,day).map(n=>n.id),['multi-day','overnight']);
+ assert.deepEqual(boardCalendarNotes(board).map(n=>n.id),['multi-day','overnight','tomorrow']);
+ assert.deepEqual(boardNotesForView(board,'today').map(n=>n.id),['multi-day','overnight','manual']);
+ assert.deepEqual(boardTodayOpen(board).map(n=>n.id),['overnight','manual']);
+ assert.deepEqual(boardCalendarNotes(board,'2026-02-30'),[]);
+});
+
+test('calendar coverage distinguishes legacy single-day snapshots from future dates',()=>{
+ const board=data([]);
+ assert.deepEqual(boardCalendarCoverage(board),{start:day,end:day});
+ board.calendar.rangeStart=day;board.calendar.rangeEnd='2026-12-10';
+ assert.deepEqual(boardCalendarCoverage(board),{start:day,end:'2026-12-10'});
+ board.calendar.status='stale';
+ assert.deepEqual(boardCalendarCoverage(board),{start:day,end:'2026-12-10'},'stale snapshots retain their actual observed range');
+ board.calendar.rangeEnd='2026-11-26';
+ assert.equal(boardCalendarCoverage(board),null,'a reversed range is not verified coverage');
+ assert.equal(boardCalendarCoverage({...board,calendar:{...board.calendar,day:null,rangeStart:null,rangeEnd:null}}),null);
+});
+
+test('month picker uses stable Gregorian day strings across leap days and year boundaries',()=>{
+ const february=boardMonthDays('2028-02-15');
+ assert.equal(february.length,42);
+ assert.equal(february[0],'2028-01-31','weeks start on Monday');
+ assert.ok(february.includes('2028-02-29'));
+ assert.equal(boardShiftMonth('2026-12-31',1),'2027-01-01');
+ assert.equal(boardShiftMonth('2027-01-31',-1),'2026-12-01');
+ assert.equal(boardShiftDay('2028-02-28',1),'2028-02-29');
+ assert.equal(boardShiftDay('2026-12-31',1),'2027-01-01');
+ assert.deepEqual(boardMonthDays('2026-02-30'),[]);
 });
